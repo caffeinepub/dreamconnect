@@ -1,0 +1,96 @@
+@font-face {
+  font-family: "Bricolage Grotesque";
+  src: url("/assets/fonts/BricolageGrotesque-Variable.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/assets/fonts/PlusJakartaSans-Variable.woff2") format("woff2");
+  font-weight: 300 700;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0.12 0.012 258;
+    --foreground: 0.96 0.008 260;
+    --card: 0.16 0.018 256;
+    --card-foreground: 0.96 0.008 260;
+    --popover: 0.14 0.016 256;
+    --popover-foreground: 0.96 0.008 260;
+    --primary: 0.58 0.22 230;
+    --primary-foreground: 0.98 0 0;
+    --secondary: 0.2 0.018 258;
+    --secondary-foreground: 0.85 0.008 260;
+    --muted: 0.19 0.014 258;
+    --muted-foreground: 0.52 0.018 258;
+    --accent: 0.72 0.19 55;
+    --accent-foreground: 0.1 0.01 258;
+    --destructive: 0.55 0.22 28;
+    --destructive-foreground: 0.98 0 0;
+    --border: 0.22 0.018 258;
+    --input: 0.2 0.018 258;
+    --ring: 0.58 0.22 230;
+    --radius: 0.75rem;
+    --chart-1: 0.58 0.22 230;
+    --chart-2: 0.72 0.19 55;
+    --chart-3: 0.62 0.18 145;
+    --chart-4: 0.65 0.2 310;
+    --chart-5: 0.62 0.22 28;
+    --sidebar: 0.14 0.016 256;
+    --sidebar-foreground: 0.96 0.008 260;
+    --sidebar-primary: 0.58 0.22 230;
+    --sidebar-primary-foreground: 0.98 0 0;
+    --sidebar-accent: 0.19 0.014 258;
+    --sidebar-accent-foreground: 0.85 0.008 260;
+    --sidebar-border: 0.22 0.018 258;
+    --sidebar-ring: 0.58 0.22 230;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-body;
+    min-height: 100vh;
+  }
+}
+
+/* Product card styles */
+.product-card {
+  background: linear-gradient(
+    135deg,
+    oklch(0.17 0.022 258),
+    oklch(0.14 0.018 255)
+  );
+  border: 1px solid oklch(0.26 0.022 258);
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.15s;
+}
+.product-card:hover {
+  border-color: oklch(0.58 0.22 230 / 0.5);
+  box-shadow: 0 0 24px oklch(0.58 0.22 230 / 0.12), 0 4px 24px
+    oklch(0 0 0 / 0.4);
+  transform: translateY(-2px);
+}
+.product-card.is-full {
+  opacity: 0.6;
+}
+
+/* Noise grain overlay */
+.noise-bg::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  opacity: 0.45;
+}
