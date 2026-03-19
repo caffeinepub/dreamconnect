@@ -4,6 +4,36 @@ import { useActor } from "./useActor";
 
 export type { Registration, UserProfile };
 
+// Local type definitions for new backend features
+export interface ServiceProviderProfile {
+  name: string;
+  businessName: string;
+  category: string;
+  phone: string;
+}
+
+export interface Quote {
+  id: bigint;
+  slotKey: string;
+  serviceProviderId: string;
+  providerName: string;
+  businessName: string;
+  title: string;
+  description: string;
+  price: string;
+  timestamp: bigint;
+}
+
+export interface ChatMessage {
+  id: bigint;
+  slotKey: string;
+  serviceProviderId: string;
+  memberId: string;
+  senderIsProvider: boolean;
+  content: string;
+  timestamp: bigint;
+}
+
 export function useProductsForCategory(category: string) {
   const { actor, isFetching } = useActor();
   return useQuery<string[]>({
@@ -140,6 +170,232 @@ export function useSaveCallerUserProfile() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["currentUserProfile"] });
+    },
+  });
+}
+
+// ===== SERVICE PROVIDER HOOKS =====
+
+export function useMyServiceProviderProfile() {
+  const { actor, isFetching: actorFetching } = useActor();
+  const query = useQuery<ServiceProviderProfile | null>({
+    queryKey: ["myServiceProviderProfile"],
+    queryFn: async () => {
+      if (!actor) throw new Error("Actor not available");
+      return (actor as any).getMyServiceProviderProfile();
+    },
+    enabled: !!actor && !actorFetching,
+    retry: false,
+  });
+  return {
+    ...query,
+    isLoading: actorFetching || query.isLoading,
+    isFetched: !!actor && query.isFetched,
+  };
+}
+
+export function useRegisterServiceProvider() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (profile: ServiceProviderProfile) => {
+      if (!actor) throw new Error("Not connected");
+      return (actor as any).registerServiceProvider(profile);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["myServiceProviderProfile"],
+      });
+    },
+  });
+}
+
+export function useSlotMembers(category: string, product: string) {
+  const { actor, isFetching } = useActor();
+  return useQuery<Registration[]>({
+    queryKey: ["slotMembers", category, product],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).getSlotMembers(category, product);
+    },
+    enabled: !!actor && !isFetching && !!category && !!product,
+    refetchInterval: 15000,
+  });
+}
+
+export function useQuotesForSlot(category: string, product: string) {
+  const { actor, isFetching } = useActor();
+  return useQuery<Quote[]>({
+    queryKey: ["quotesForSlot", category, product],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).getQuotesForSlot(category, product);
+    },
+    enabled: !!actor && !isFetching && !!category && !!product,
+    refetchInterval: 10000,
+  });
+}
+
+export function useSubmitQuote() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      category: string;
+      product: string;
+      title: string;
+      description: string;
+      price: string;
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return (actor as any).submitQuote(
+        vars.category,
+        vars.product,
+        vars.title,
+        vars.description,
+        vars.price,
+      );
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: ["quotesForSlot", vars.category, vars.product],
+      });
+    },
+  });
+}
+
+export function useChatMessages(
+  category: string,
+  product: string,
+  serviceProviderId: string,
+) {
+  const { actor, isFetching } = useActor();
+  return useQuery<ChatMessage[]>({
+    queryKey: ["chatMessages", category, product, serviceProviderId],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).getChatMessages(
+        category,
+        product,
+        serviceProviderId,
+      );
+    },
+    enabled: !!actor && !isFetching && !!serviceProviderId,
+    refetchInterval: 3000,
+  });
+}
+
+export function useProviderChatMessages(
+  category: string,
+  product: string,
+  memberId: string,
+) {
+  const { actor, isFetching } = useActor();
+  return useQuery<ChatMessage[]>({
+    queryKey: ["providerChatMessages", category, product, memberId],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).getProviderChatMessages(
+        category,
+        product,
+        memberId,
+      );
+    },
+    enabled: !!actor && !isFetching && !!memberId,
+    refetchInterval: 3000,
+  });
+}
+
+export function useSendChatMessage() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      category: string;
+      product: string;
+      serviceProviderId: string;
+      content: string;
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return (actor as any).sendChatMessage(
+        vars.category,
+        vars.product,
+        vars.serviceProviderId,
+        vars.content,
+        false,
+      );
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: [
+          "chatMessages",
+          vars.category,
+          vars.product,
+          vars.serviceProviderId,
+        ],
+      });
+    },
+  });
+}
+
+export function useSendChatMessageAsProvider() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      category: string;
+      product: string;
+      memberId: string;
+      content: string;
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return (actor as any).sendChatMessageAsProvider(
+        vars.category,
+        vars.product,
+        vars.memberId,
+        vars.content,
+      );
+    },
+    onSuccess: (_, vars) => {
+      queryClient.invalidateQueries({
+        queryKey: [
+          "providerChatMessages",
+          vars.category,
+          vars.product,
+          vars.memberId,
+        ],
+      });
+    },
+  });
+}
+
+// ===== PAYMENT HOOKS =====
+
+export function useHasSpPaidForSlot(category: string, product: string) {
+  const { actor, isFetching } = useActor();
+  return useQuery<boolean>({
+    queryKey: ["hasSpPaidForSlot", category, product],
+    queryFn: async () => {
+      if (!actor) return false;
+      return actor.hasSpPaidForSlot(category, product);
+    },
+    enabled: !!actor && !isFetching && !!category && !!product,
+  });
+}
+
+export function useRecordSpSlotPayment() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      category,
+      product,
+    }: { category: string; product: string }) =>
+      actor!.recordSpSlotPayment(category, product),
+    onSuccess: (_, { category, product }) => {
+      queryClient.invalidateQueries({
+        queryKey: ["hasSpPaidForSlot", category, product],
+      });
     },
   });
 }

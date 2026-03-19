@@ -1,3 +1,5 @@
+import { ProviderHomeScreen } from "@/components/ProviderView";
+import { SlotDetailPage } from "@/components/SlotDetailPage";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,16 +13,22 @@ import {
 } from "@tanstack/react-query";
 import {
   Armchair,
+  Briefcase,
   Building2,
   Car,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
+  IndianRupee,
   Loader2,
-  LogIn,
   LogOut,
   Monitor,
+  Phone,
+  Shield,
+  Smartphone,
   Sofa,
   User,
+  Users,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -29,15 +37,19 @@ import { toast } from "sonner";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
   type Registration,
+  type ServiceProviderProfile,
   useAllRegistrations,
   useGetCallerUserProfile,
   useIsAdmin,
   useMyRegistrations,
+  useMyServiceProviderProfile,
   useProductCounts,
   useProductsForCategory,
   useRegisterForProduct,
+  useRegisterServiceProvider,
   useSaveCallerUserProfile,
 } from "./hooks/useQueries";
+import { openRazorpayCheckout } from "./utils/razorpay";
 
 const queryClient = new QueryClient();
 
@@ -95,30 +107,30 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Bedroom",
     "Kitchen",
     "Bathroom",
-    "Home Office",
-    "Dining Room",
+    "Office",
+    "Kids Room",
     "Balcony",
-    "Study Room",
+    "Dining Room",
   ],
   Furniture: [
     "Sofa",
-    "Bed Frame",
-    "Dining Table",
+    "Bed",
     "Wardrobe",
-    "Bookshelf",
+    "Dining Table",
     "Office Chair",
-    "Coffee Table",
+    "Bookshelf",
     "TV Unit",
+    "Shoe Rack",
   ],
   "Real Estate": [
-    "1BHK Apartment",
-    "2BHK Apartment",
-    "3BHK Apartment",
+    "Apartment",
     "Villa",
     "Plot",
     "Commercial Space",
-    "Studio Flat",
+    "Studio",
     "Penthouse",
+    "Farmhouse",
+    "Warehouse",
   ],
 };
 
@@ -132,6 +144,191 @@ function getBarColor(count: number): string {
 }
 
 type Page = "home" | "my-registrations" | "admin";
+
+// ===== WELCOME / AUTH SCREEN =====
+function WelcomeScreen({
+  onLogin,
+  isLoggingIn,
+}: { onLogin: () => void; isLoggingIn: boolean }) {
+  const [faqOpen, setFaqOpen] = useState(false);
+
+  const perks = [
+    {
+      icon: Smartphone,
+      text: "Secure login using your phone or laptop",
+    },
+    {
+      icon: Shield,
+      text: "No password to remember — ever",
+    },
+    {
+      icon: CheckCircle2,
+      text: "Works on any device you verify once",
+    },
+  ];
+
+  const faqSteps = [
+    {
+      num: "1",
+      title: "First time?",
+      body: 'Tap "Continue with your device" below and follow the on-screen steps. It takes about 30 seconds.',
+    },
+    {
+      num: "2",
+      title: "Using a new device?",
+      body: 'On the next screen, choose "Use existing anchor" and enter your recovery phrase to get back in.',
+    },
+    {
+      num: "3",
+      title: "Save your recovery phrase",
+      body: "After setup, save the recovery phrase in your Notes app or a safe place. You'll need it if you ever switch devices.",
+    },
+  ];
+
+  return (
+    <div
+      data-ocid="welcome.page"
+      className="noise-bg min-h-screen flex flex-col items-center justify-center px-4 py-12 relative"
+    >
+      {/* Background gradients */}
+      <div
+        className="fixed inset-0 pointer-events-none z-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 80% 60% at 50% -10%, oklch(0.25 0.06 230 / 0.35), transparent), radial-gradient(ellipse 60% 50% at 80% 100%, oklch(0.20 0.05 310 / 0.2), transparent)",
+        }}
+      />
+
+      <motion.div
+        className="relative z-10 w-full max-w-sm flex flex-col items-center"
+        initial={{ opacity: 0, y: 24 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: "easeOut" }}
+      >
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center shadow-glow mb-4">
+            <Zap size={32} className="text-white" fill="white" />
+          </div>
+          <h1 className="font-display text-4xl font-black tracking-tight text-foreground">
+            Letzclub
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1 tracking-widest uppercase">
+            Your Future Awaits
+          </p>
+        </div>
+
+        {/* Main card */}
+        <div className="w-full rounded-3xl border border-border/60 bg-card/80 backdrop-blur-md p-7 shadow-2xl">
+          <h2 className="font-display text-2xl font-extrabold text-foreground mb-1 text-center">
+            Join Letzclub
+          </h2>
+          <p className="text-sm text-muted-foreground text-center mb-7 leading-relaxed">
+            Register your interest in electronics, cars,
+            <br />
+            furniture &amp; more — all in one place.
+          </p>
+
+          {/* Big CTA button */}
+          <Button
+            data-ocid="welcome.signin_button"
+            onClick={onLogin}
+            disabled={isLoggingIn}
+            className="w-full h-14 text-base font-bold rounded-2xl bg-primary text-white shadow-glow hover:opacity-90 transition-opacity disabled:opacity-60"
+          >
+            {isLoggingIn ? (
+              <>
+                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                Connecting...
+              </>
+            ) : (
+              "Continue with your device →"
+            )}
+          </Button>
+
+          {/* Perk bullets */}
+          <ul className="mt-6 space-y-3">
+            {perks.map((perk) => {
+              const Icon = perk.icon;
+              return (
+                <li key={perk.text} className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+                    <Icon size={15} className="text-primary" />
+                  </div>
+                  <span className="text-sm text-foreground/80">
+                    {perk.text}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+
+        {/* FAQ accordion */}
+        <div className="w-full mt-4 rounded-2xl border border-border/50 bg-card/50 backdrop-blur-sm overflow-hidden">
+          <button
+            type="button"
+            data-ocid="welcome.faq_toggle"
+            onClick={() => setFaqOpen((v) => !v)}
+            className="w-full flex items-center justify-between px-5 py-4 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <span>How to use on a new device?</span>
+            <motion.div
+              animate={{ rotate: faqOpen ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown size={16} />
+            </motion.div>
+          </button>
+
+          <AnimatePresence initial={false}>
+            {faqOpen && (
+              <motion.div
+                key="faq-content"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+                className="overflow-hidden"
+              >
+                <div className="px-5 pb-5 space-y-4 border-t border-border/40 pt-4">
+                  {faqSteps.map((step) => (
+                    <div key={step.num} className="flex gap-3">
+                      <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center flex-shrink-0 mt-0.5">
+                        {step.num}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">
+                          {step.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                          {step.body}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Footer */}
+        <p className="text-xs text-muted-foreground mt-6 text-center">
+          © {new Date().getFullYear()}. Built with ❤️ using{" "}
+          <a
+            href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            caffeine.ai
+          </a>
+        </p>
+      </motion.div>
+    </div>
+  );
+}
 
 // ===== PROFILE SETUP MODAL =====
 function ProfileSetupModal({ onComplete }: { onComplete: () => void }) {
@@ -165,11 +362,11 @@ function ProfileSetupModal({ onComplete }: { onComplete: () => void }) {
             <User size={18} className="text-primary" />
           </div>
           <h2 className="font-display text-xl font-bold text-foreground">
-            Welcome!
+            One last thing!
           </h2>
         </div>
         <p className="text-sm text-muted-foreground mb-5">
-          Enter your name to complete your profile setup.
+          What should we call you?
         </p>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
@@ -193,12 +390,12 @@ function ProfileSetupModal({ onComplete }: { onComplete: () => void }) {
             type="submit"
             data-ocid="profile.submit_button"
             disabled={!name.trim() || saveProfile.isPending}
-            className="w-full bg-primary text-primary-foreground font-bold"
+            className="w-full bg-primary text-primary-foreground font-bold h-12 rounded-xl"
           >
             {saveProfile.isPending ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : null}
-            Get Started
+            Let&apos;s go!
           </Button>
         </form>
       </motion.div>
@@ -219,19 +416,10 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
   const [location, setLocation] = useState("");
   const [requirements, setRequirements] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const [paying, setPaying] = useState(false);
   const register = useRegisterForProduct();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (
-      !name.trim() ||
-      !phone.trim() ||
-      !location.trim() ||
-      !requirements.trim()
-    ) {
-      toast.error("Please fill in all fields");
-      return;
-    }
+  const doRegister = async () => {
     try {
       await register.mutateAsync({
         category,
@@ -247,6 +435,35 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
     } catch {
       toast.error("Registration failed. Please try again.");
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (
+      !name.trim() ||
+      !phone.trim() ||
+      !location.trim() ||
+      !requirements.trim()
+    ) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    setPaying(true);
+    openRazorpayCheckout({
+      amount: 45,
+      description: `Registration fee for ${product} (${category})`,
+      onSuccess: async (_paymentId: string) => {
+        setPaying(false);
+        await doRegister();
+      },
+      onFailure: () => {
+        setPaying(false);
+        toast.error("Payment failed. Please try again.");
+      },
+    }).catch(() => {
+      setPaying(false);
+      toast.error("Payment gateway unavailable. Please try again.");
+    });
   };
 
   const cat = CATEGORIES.find((c) => c.id === category);
@@ -279,13 +496,13 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
             type="button"
             data-ocid="register.close_button"
             onClick={onClose}
-            className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+            className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors text-lg font-bold"
           >
             ✕
           </button>
           <div className="mb-5">
             <span
-              className="text-xs font-semibold uppercase tracking-widest"
+              className="text-xs font-bold uppercase tracking-widest"
               style={{ color: cat?.color }}
             >
               {category}
@@ -368,16 +585,28 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
                   className="bg-muted border-border focus:border-primary resize-none"
                 />
               </div>
+              <div className="rounded-xl bg-muted/50 border border-border px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
+                <IndianRupee size={12} className="text-primary flex-shrink-0" />
+                <span>
+                  Registration fee:{" "}
+                  <strong className="text-foreground">₹45</strong> (paid via
+                  Razorpay)
+                </span>
+              </div>
               <Button
                 type="submit"
                 data-ocid="register.submit_button"
-                disabled={register.isPending}
+                disabled={register.isPending || paying}
                 className="w-full bg-primary text-primary-foreground font-bold text-base py-5 rounded-xl mt-1"
               >
-                {register.isPending ? (
+                {register.isPending || paying ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                {register.isPending ? "Registering..." : "Register Interest"}
+                {paying
+                  ? "Processing Payment..."
+                  : register.isPending
+                    ? "Registering..."
+                    : "Pay ₹45 & Register"}
               </Button>
             </form>
           )}
@@ -394,6 +623,7 @@ interface ProductCardProps {
   count: number;
   index: number;
   onRegister: () => void;
+  onViewSlot: () => void;
   isAuthenticated: boolean;
   onAuthRequired: () => void;
 }
@@ -404,6 +634,7 @@ function ProductCard({
   count,
   index,
   onRegister,
+  onViewSlot,
   isAuthenticated,
   onAuthRequired,
 }: ProductCardProps) {
@@ -481,32 +712,53 @@ function ProductCard({
         />
       </div>
 
-      <Button
-        data-ocid="register.open_modal_button"
-        disabled={isFull}
-        onClick={(e) => {
-          e.stopPropagation();
-          handleClick();
-        }}
-        className={`w-full font-bold text-sm rounded-xl py-2 ${
-          isFull
-            ? "bg-muted text-muted-foreground cursor-not-allowed"
-            : "bg-primary text-white hover:opacity-90"
-        }`}
-      >
-        {isFull ? "Fully Booked" : "Register Interest"}
-      </Button>
+      <div className="flex gap-2">
+        <Button
+          data-ocid="register.open_modal_button"
+          disabled={isFull}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleClick();
+          }}
+          className={`flex-1 font-bold text-sm rounded-xl py-2 ${
+            isFull
+              ? "bg-muted text-muted-foreground cursor-not-allowed"
+              : "bg-primary text-white hover:opacity-90"
+          }`}
+        >
+          {isFull ? "Fully Booked" : "Register Interest"}
+        </Button>
+        {isAuthenticated && count > 0 && (
+          <Button
+            data-ocid="slot.view_slot_button"
+            variant="outline"
+            onClick={(e) => {
+              e.stopPropagation();
+              onViewSlot();
+            }}
+            className="rounded-xl border-border text-xs font-semibold px-3"
+          >
+            View Slot
+          </Button>
+        )}
+      </div>
     </motion.div>
   );
 }
 
 // ===== HOME PAGE =====
+interface SelectedSlot {
+  category: string;
+  product: string;
+}
+
 function HomePage({
   isAuthenticated,
   onAuthRequired,
 }: { isAuthenticated: boolean; onAuthRequired: () => void }) {
   const [activeCategory, setActiveCategory] = useState("Electronics");
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [viewSlot, setViewSlot] = useState<SelectedSlot | null>(null);
 
   const { data: products = [], isLoading: productsLoading } =
     useProductsForCategory(activeCategory);
@@ -516,8 +768,26 @@ function HomePage({
     activeCategory,
     displayProducts,
   );
+  const { data: myRegistrations = [] } = useMyRegistrations();
 
   const isLoading = productsLoading || countsLoading;
+
+  if (viewSlot) {
+    const cat = CATEGORIES.find((c) => c.id === viewSlot.category);
+    const isSlotMember = myRegistrations.some(
+      (r: Registration) =>
+        r.category === viewSlot.category && r.product === viewSlot.product,
+    );
+    return (
+      <SlotDetailPage
+        category={viewSlot.category}
+        product={viewSlot.product}
+        categoryColor={cat?.color ?? "oklch(0.6 0.2 230)"}
+        onBack={() => setViewSlot(null)}
+        isSlotMember={isSlotMember}
+      />
+    );
+  }
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -595,6 +865,9 @@ function HomePage({
               count={counts[product] ?? 0}
               index={i + 1}
               onRegister={() => setSelectedProduct(product)}
+              onViewSlot={() =>
+                setViewSlot({ category: activeCategory, product })
+              }
               isAuthenticated={isAuthenticated}
               onAuthRequired={onAuthRequired}
             />
@@ -657,7 +930,7 @@ function MyRegistrationsPage() {
             No registrations yet
           </p>
           <p className="text-sm text-muted-foreground max-w-xs">
-            You haven't registered interest in any product yet. Browse
+            You haven&apos;t registered interest in any product yet. Browse
             categories to get started.
           </p>
         </div>
@@ -931,10 +1204,231 @@ function AdminDashboard() {
   );
 }
 
+// ===== ROLE SELECTION MODAL =====
+function RoleSelectionModal({
+  onSelectCustomer,
+  onSelectProvider,
+}: {
+  onSelectCustomer: () => void;
+  onSelectProvider: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <motion.div
+        data-ocid="role_selection.dialog"
+        className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      >
+        <div className="h-1 -mt-6 -mx-6 mb-6 rounded-t-2xl bg-gradient-to-r from-primary to-accent" />
+        <div className="text-center mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-primary/15 flex items-center justify-center mx-auto mb-3">
+            <Users size={24} className="text-primary" />
+          </div>
+          <h2 className="font-display text-2xl font-bold text-foreground">
+            Who are you?
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Tell us how you want to use Letzclub
+          </p>
+        </div>
+        <div className="space-y-3">
+          <button
+            type="button"
+            data-ocid="role_selection.customer_button"
+            onClick={onSelectCustomer}
+            className="w-full rounded-2xl border border-border bg-muted/40 hover:border-primary/40 hover:bg-primary/5 p-4 text-left transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0 group-hover:bg-primary/25 transition-colors">
+                <User size={20} className="text-primary" />
+              </div>
+              <div>
+                <p className="font-bold text-foreground text-sm">
+                  I am a Customer
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Browse products, register interest, compare offers
+                </p>
+              </div>
+            </div>
+          </button>
+          <button
+            type="button"
+            data-ocid="role_selection.provider_button"
+            onClick={onSelectProvider}
+            className="w-full rounded-2xl border border-border bg-muted/40 hover:border-accent/40 hover:bg-accent/5 p-4 text-left transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-accent/30 flex items-center justify-center flex-shrink-0 group-hover:bg-accent/50 transition-colors">
+                <Briefcase size={20} className="text-accent-foreground" />
+              </div>
+              <div>
+                <p className="font-bold text-foreground text-sm">
+                  I am a Service Provider
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  View customer requirements, submit offers, chat with clients
+                </p>
+              </div>
+            </div>
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+// ===== SERVICE PROVIDER SETUP MODAL =====
+function ServiceProviderSetupModal({
+  onComplete,
+}: {
+  onComplete: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [category, setCategory] = useState("Electronics");
+  const [phone, setPhone] = useState("");
+  const registerSP = useRegisterServiceProvider();
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !businessName.trim() || !phone.trim()) return;
+    try {
+      await registerSP.mutateAsync({
+        name: name.trim(),
+        businessName: businessName.trim(),
+        category,
+        phone: phone.trim(),
+      });
+      toast.success("Welcome to Letzclub as a Service Provider!");
+      onComplete();
+    } catch {
+      toast.error("Failed to save profile. Please try again.");
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+      <motion.div
+        data-ocid="sp_setup.dialog"
+        className="w-full max-w-sm rounded-2xl border border-border bg-card p-6 shadow-2xl my-4"
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      >
+        <div className="h-1 -mt-6 -mx-6 mb-6 rounded-t-2xl bg-gradient-to-r from-accent to-primary" />
+        <div className="flex items-center gap-2.5 mb-2">
+          <div className="w-9 h-9 rounded-xl bg-accent/30 flex items-center justify-center">
+            <Briefcase size={18} className="text-accent-foreground" />
+          </div>
+          <h2 className="font-display text-xl font-bold text-foreground">
+            Service Provider Setup
+          </h2>
+        </div>
+        <p className="text-sm text-muted-foreground mb-5">
+          Tell customers about you and your business
+        </p>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="spName" className="text-sm font-medium">
+              Your Name
+            </Label>
+            <Input
+              id="spName"
+              data-ocid="sp_setup.name_input"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Your full name"
+              autoFocus
+              className="bg-muted border-border focus:border-primary"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="spBusiness" className="text-sm font-medium">
+              Business Name
+            </Label>
+            <Input
+              id="spBusiness"
+              data-ocid="sp_setup.business_input"
+              value={businessName}
+              onChange={(e) => setBusinessName(e.target.value)}
+              placeholder="Your shop or company name"
+              className="bg-muted border-border focus:border-primary"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="spCategory" className="text-sm font-medium">
+              Your Category
+            </Label>
+            <select
+              id="spCategory"
+              data-ocid="sp_setup.category_select"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full h-10 px-3 rounded-xl bg-muted border border-border focus:border-primary text-sm text-foreground focus:outline-none"
+            >
+              {[
+                "Electronics",
+                "Cars",
+                "Interior Designing",
+                "Furniture",
+                "Real Estate",
+              ].map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="spPhone" className="text-sm font-medium">
+              Phone Number
+            </Label>
+            <div className="relative">
+              <Phone
+                size={14}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+              />
+              <Input
+                id="spPhone"
+                data-ocid="sp_setup.phone_input"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+91 98765 43210"
+                className="bg-muted border-border focus:border-primary pl-8"
+              />
+            </div>
+          </div>
+          <Button
+            type="submit"
+            data-ocid="sp_setup.submit_button"
+            disabled={
+              !name.trim() ||
+              !businessName.trim() ||
+              !phone.trim() ||
+              registerSP.isPending
+            }
+            className="w-full bg-primary text-primary-foreground font-bold h-12 rounded-xl"
+          >
+            {registerSP.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : null}
+            Start as Service Provider
+          </Button>
+        </form>
+      </motion.div>
+    </div>
+  );
+}
+
 // ===== MAIN APP =====
 function LetzclubApp() {
   const [page, setPage] = useState<Page>("home");
-  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [roleChoice, setRoleChoice] = useState<"customer" | "provider" | null>(
+    null,
+  );
   const { login, clear, loginStatus, identity, isInitializing } =
     useInternetIdentity();
   const queryClient = useQueryClient();
@@ -948,11 +1442,37 @@ function LetzclubApp() {
     isLoading: profileLoading,
     isFetched: profileFetched,
   } = useGetCallerUserProfile();
+  const {
+    data: spProfile,
+    isLoading: spProfileLoading,
+    isFetched: spProfileFetched,
+  } = useMyServiceProviderProfile();
+
+  const isServiceProvider = !!spProfile;
+  const bothFetched = profileFetched && spProfileFetched;
+  const bothLoading = profileLoading || spProfileLoading;
+
+  const showRoleSelection =
+    isAuthenticated &&
+    !bothLoading &&
+    bothFetched &&
+    userProfile === null &&
+    spProfile === null &&
+    roleChoice === null;
   const showProfileSetup =
     isAuthenticated &&
-    !profileLoading &&
-    profileFetched &&
-    userProfile === null;
+    !bothLoading &&
+    bothFetched &&
+    userProfile === null &&
+    spProfile === null &&
+    roleChoice === "customer";
+  const showSPSetup =
+    isAuthenticated &&
+    !bothLoading &&
+    bothFetched &&
+    spProfile === null &&
+    userProfile === null &&
+    roleChoice === "provider";
 
   const handleLogin = async () => {
     try {
@@ -971,13 +1491,106 @@ function LetzclubApp() {
     await clear();
     queryClient.clear();
     setPage("home");
+    setRoleChoice(null);
     toast.success("Logged out successfully");
   };
 
+  // Full-screen initializing state
   if (isInitializing) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-background">
         <Loader2 size={36} className="animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  // Show welcome/sign-in screen if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <>
+        <WelcomeScreen onLogin={handleLogin} isLoggingIn={isLoggingIn} />
+        <Toaster richColors position="top-right" />
+      </>
+    );
+  }
+
+  // Show SP home if service provider
+  if (isAuthenticated && isServiceProvider && spProfile) {
+    return (
+      <div className="noise-bg min-h-screen relative">
+        <div
+          className="fixed inset-0 pointer-events-none z-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 80% 60% at 50% -20%, oklch(0.25 0.06 230 / 0.25), transparent), radial-gradient(ellipse 60% 40% at 80% 80%, oklch(0.20 0.04 28 / 0.15), transparent)",
+          }}
+        />
+        <div className="relative z-10 flex flex-col min-h-screen">
+          <header className="border-b border-border/50 bg-background/80 backdrop-blur-md sticky top-0 z-40">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex items-center justify-between py-3.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center shadow-glow">
+                    <Zap size={20} className="text-white" fill="white" />
+                  </div>
+                  <div>
+                    <div className="font-display text-xl font-black tracking-tight text-foreground leading-none">
+                      Letzclub
+                    </div>
+                    <div className="text-xs text-muted-foreground tracking-widest uppercase">
+                      Service Provider
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/40 border border-border/60">
+                    <Briefcase size={13} className="text-muted-foreground" />
+                    <span className="text-xs font-medium text-foreground">
+                      {spProfile.name}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    data-ocid="nav.signout_button"
+                    onClick={handleLogout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted border border-border/60 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
+                  >
+                    <LogOut size={13} />
+                    <span className="hidden sm:inline">Sign Out</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </header>
+          <div className="flex-1">
+            <ProviderHomeScreen spProfile={spProfile} />
+          </div>
+          <footer className="border-t border-border/40 py-8 mt-16">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+              <div className="flex items-center justify-center gap-2 mb-2">
+                <div className="w-6 h-6 rounded-lg bg-primary/20 flex items-center justify-center">
+                  <Zap size={13} className="text-primary" fill="currentColor" />
+                </div>
+                <span className="font-display font-bold text-foreground">
+                  Letzclub
+                </span>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                © {new Date().getFullYear()}. Built with ❤️ using{" "}
+                <a
+                  href={`https://caffeine.ai?utm_source=caffeine-footer&utm_medium=referral&utm_content=${encodeURIComponent(window.location.hostname)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  caffeine.ai
+                </a>
+              </p>
+            </div>
+          </footer>
+        </div>
+        {showSPSetup && <ServiceProviderSetupModal onComplete={() => {}} />}
+        <Toaster richColors position="top-right" />
       </div>
     );
   }
@@ -1019,21 +1632,19 @@ function LetzclubApp() {
 
               {/* Nav + Auth */}
               <div className="flex items-center gap-2">
-                {isAuthenticated && (
-                  <button
-                    type="button"
-                    data-ocid="nav.my_registrations_link"
-                    onClick={() => setPage("my-registrations")}
-                    className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                      page === "my-registrations"
-                        ? "bg-primary/20 text-primary"
-                        : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
-                  >
-                    <ClipboardList size={13} />
-                    My Registrations
-                  </button>
-                )}
+                <button
+                  type="button"
+                  data-ocid="nav.my_registrations_link"
+                  onClick={() => setPage("my-registrations")}
+                  className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    page === "my-registrations"
+                      ? "bg-primary/20 text-primary"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <ClipboardList size={13} />
+                  My Registrations
+                </button>
                 {isAdmin && (
                   <button
                     type="button"
@@ -1049,109 +1660,57 @@ function LetzclubApp() {
                     Admin
                   </button>
                 )}
-                {isAuthenticated ? (
-                  <div className="flex items-center gap-2">
-                    <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/40 border border-border/60">
-                      <User size={13} className="text-muted-foreground" />
-                      <span className="text-xs font-medium text-foreground">
-                        {userProfile?.name ?? "User"}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      data-ocid="nav.signout_button"
-                      onClick={handleLogout}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted border border-border/60 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
-                    >
-                      <LogOut size={13} />
-                      <span className="hidden sm:inline">Sign Out</span>
-                    </button>
+                <div className="flex items-center gap-2">
+                  <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/40 border border-border/60">
+                    <User size={13} className="text-muted-foreground" />
+                    <span className="text-xs font-medium text-foreground">
+                      {userProfile?.name ?? "User"}
+                    </span>
                   </div>
-                ) : (
                   <button
                     type="button"
-                    data-ocid="nav.signin_button"
-                    onClick={handleLogin}
-                    disabled={isLoggingIn}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-primary text-white text-sm font-bold shadow-glow hover:opacity-90 transition-opacity disabled:opacity-50"
+                    data-ocid="nav.signout_button"
+                    onClick={handleLogout}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted/50 hover:bg-muted border border-border/60 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all"
                   >
-                    {isLoggingIn ? (
-                      <Loader2 size={14} className="animate-spin" />
-                    ) : (
-                      <LogIn size={14} />
-                    )}
-                    {isLoggingIn ? "Signing in..." : "Sign In"}
+                    <LogOut size={13} />
+                    <span className="hidden sm:inline">Sign Out</span>
                   </button>
-                )}
+                </div>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Auth prompt banner */}
-        <AnimatePresence>
-          {showAuthPrompt && (
-            <motion.div
-              className="bg-primary/10 border-b border-primary/30 py-2 px-4 flex items-center justify-between gap-3"
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-            >
-              <p className="text-sm text-foreground font-medium">
-                Sign in to register your interest in products
-              </p>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleLogin}
-                  disabled={isLoggingIn}
-                  className="px-3 py-1 rounded-full bg-primary text-white text-xs font-bold"
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowAuthPrompt(false)}
-                  className="text-muted-foreground hover:text-foreground text-sm"
-                >
-                  ✕
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Mobile nav for authenticated users */}
-        {isAuthenticated && (
-          <div className="sm:hidden flex gap-2 px-4 pt-3 pb-1 bg-background/80 backdrop-blur-sm border-b border-border/30">
+        <div className="sm:hidden flex gap-2 px-4 pt-3 pb-1 bg-background/80 backdrop-blur-sm border-b border-border/30">
+          <button
+            type="button"
+            data-ocid="nav.my_registrations_link"
+            onClick={() => setPage("my-registrations")}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              page === "my-registrations"
+                ? "bg-primary/20 text-primary"
+                : "bg-muted/50 text-muted-foreground"
+            }`}
+          >
+            <ClipboardList size={12} /> My Registrations
+          </button>
+          {isAdmin && (
             <button
               type="button"
-              data-ocid="nav.my_registrations_link"
-              onClick={() => setPage("my-registrations")}
+              data-ocid="nav.admin_link"
+              onClick={() => setPage("admin")}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                page === "my-registrations"
+                page === "admin"
                   ? "bg-primary/20 text-primary"
                   : "bg-muted/50 text-muted-foreground"
               }`}
             >
-              <ClipboardList size={12} /> My Registrations
+              <ClipboardList size={12} /> Admin
             </button>
-            {isAdmin && (
-              <button
-                type="button"
-                data-ocid="nav.admin_link"
-                onClick={() => setPage("admin")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                  page === "admin"
-                    ? "bg-primary/20 text-primary"
-                    : "bg-muted/50 text-muted-foreground"
-                }`}
-              >
-                <ClipboardList size={12} /> Admin
-              </button>
-            )}
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Page Content */}
         <div className="flex-1">
@@ -1166,11 +1725,11 @@ function LetzclubApp() {
               >
                 <HomePage
                   isAuthenticated={isAuthenticated}
-                  onAuthRequired={() => setShowAuthPrompt(true)}
+                  onAuthRequired={() => {}}
                 />
               </motion.div>
             )}
-            {page === "my-registrations" && isAuthenticated && (
+            {page === "my-registrations" && (
               <motion.div
                 key="my-reg"
                 initial={{ opacity: 0, y: 12 }}
@@ -1221,8 +1780,15 @@ function LetzclubApp() {
         </footer>
       </div>
 
-      {/* Profile Setup Modal */}
+      {/* Role Selection and Profile Setup Modals */}
+      {showRoleSelection && (
+        <RoleSelectionModal
+          onSelectCustomer={() => setRoleChoice("customer")}
+          onSelectProvider={() => setRoleChoice("provider")}
+        />
+      )}
       {showProfileSetup && <ProfileSetupModal onComplete={() => {}} />}
+      {showSPSetup && <ServiceProviderSetupModal onComplete={() => {}} />}
 
       <Toaster richColors position="top-right" />
     </div>

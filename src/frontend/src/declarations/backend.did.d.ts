@@ -10,6 +10,26 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface ChatMessage {
+  'id' : bigint,
+  'memberId' : string,
+  'senderIsProvider' : boolean,
+  'slotKey' : string,
+  'content' : string,
+  'serviceProviderId' : string,
+  'timestamp' : Time,
+}
+export interface Quote {
+  'id' : bigint,
+  'title' : string,
+  'slotKey' : string,
+  'serviceProviderId' : string,
+  'businessName' : string,
+  'description' : string,
+  'timestamp' : Time,
+  'providerName' : string,
+  'price' : string,
+}
 export interface Registration {
   'id' : bigint,
   'userId' : string,
@@ -20,6 +40,12 @@ export interface Registration {
   'requirements' : string,
   'location' : string,
   'product' : string,
+}
+export interface ServiceProviderProfile {
+  'name' : string,
+  'businessName' : string,
+  'category' : string,
+  'phone' : string,
 }
 export type Time = bigint;
 export interface UserProfile { 'name' : string }
@@ -33,17 +59,42 @@ export interface _SERVICE {
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCategories' : ActorMethod<[], Array<string>>,
+  'getChatMessages' : ActorMethod<[string, string, string], Array<ChatMessage>>,
   'getMyRegistrations' : ActorMethod<[], Array<Registration>>,
+  'getMyServiceProviderProfile' : ActorMethod<
+    [],
+    [] | [ServiceProviderProfile]
+  >,
   'getProductCount' : ActorMethod<[string, string], bigint>,
   'getProductsForCategory' : ActorMethod<[string], Array<string>>,
+  'getProviderChatMessages' : ActorMethod<
+    [string, string, string],
+    Array<ChatMessage>
+  >,
+  'getQuotesForSlot' : ActorMethod<[string, string], Array<Quote>>,
+  'getSlotMembers' : ActorMethod<[string, string], Array<Registration>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
-  'initialize' : ActorMethod<[], undefined>,
+  'hasSpPaidForSlot' : ActorMethod<[string, string], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'recordSpSlotPayment' : ActorMethod<[string, string], undefined>,
   'registerForProduct' : ActorMethod<
     [string, string, string, string, string, string],
     string
   >,
+  'registerServiceProvider' : ActorMethod<[ServiceProviderProfile], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
+  'sendChatMessage' : ActorMethod<
+    [string, string, string, string, boolean],
+    undefined
+  >,
+  'sendChatMessageAsProvider' : ActorMethod<
+    [string, string, string, string],
+    undefined
+  >,
+  'submitQuote' : ActorMethod<
+    [string, string, string, string, string],
+    undefined
+  >,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

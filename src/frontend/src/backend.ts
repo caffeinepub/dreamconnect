@@ -90,9 +90,6 @@ export class ExternalBlob {
     }
 }
 export type Time = bigint;
-export interface UserProfile {
-    name: string;
-}
 export interface Registration {
     id: bigint;
     userId: string;
@@ -103,6 +100,35 @@ export interface Registration {
     requirements: string;
     location: string;
     product: string;
+}
+export interface ChatMessage {
+    id: bigint;
+    memberId: string;
+    senderIsProvider: boolean;
+    slotKey: string;
+    content: string;
+    serviceProviderId: string;
+    timestamp: Time;
+}
+export interface Quote {
+    id: bigint;
+    title: string;
+    slotKey: string;
+    serviceProviderId: string;
+    businessName: string;
+    description: string;
+    timestamp: Time;
+    providerName: string;
+    price: string;
+}
+export interface UserProfile {
+    name: string;
+}
+export interface ServiceProviderProfile {
+    name: string;
+    businessName: string;
+    category: string;
+    phone: string;
 }
 export enum UserRole {
     admin = "admin",
@@ -116,16 +142,26 @@ export interface backendInterface {
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCategories(): Promise<Array<string>>;
+    getChatMessages(category: string, product: string, serviceProviderId: string): Promise<Array<ChatMessage>>;
     getMyRegistrations(): Promise<Array<Registration>>;
+    getMyServiceProviderProfile(): Promise<ServiceProviderProfile | null>;
     getProductCount(category: string, product: string): Promise<bigint>;
     getProductsForCategory(category: string): Promise<Array<string>>;
+    getProviderChatMessages(category: string, product: string, memberId: string): Promise<Array<ChatMessage>>;
+    getQuotesForSlot(category: string, product: string): Promise<Array<Quote>>;
+    getSlotMembers(category: string, product: string): Promise<Array<Registration>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
-    initialize(): Promise<void>;
+    hasSpPaidForSlot(category: string, product: string): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
+    recordSpSlotPayment(category: string, product: string): Promise<void>;
     registerForProduct(category: string, product: string, name: string, phone: string, location: string, requirements: string): Promise<string>;
+    registerServiceProvider(profile: ServiceProviderProfile): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
+    sendChatMessage(category: string, product: string, serviceProviderId: string, content: string, senderIsProvider: boolean): Promise<void>;
+    sendChatMessageAsProvider(category: string, product: string, memberId: string, content: string): Promise<void>;
+    submitQuote(category: string, product: string, title: string, description: string, price: string): Promise<void>;
 }
-import type { UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
+import type { ServiceProviderProfile as _ServiceProviderProfile, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
     async _initializeAccessControlWithSecret(arg0: string): Promise<void> {
@@ -212,6 +248,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getChatMessages(arg0: string, arg1: string, arg2: string): Promise<Array<ChatMessage>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getChatMessages(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getChatMessages(arg0, arg1, arg2);
+            return result;
+        }
+    }
     async getMyRegistrations(): Promise<Array<Registration>> {
         if (this.processError) {
             try {
@@ -224,6 +274,20 @@ export class Backend implements backendInterface {
         } else {
             const result = await this.actor.getMyRegistrations();
             return result;
+        }
+    }
+    async getMyServiceProviderProfile(): Promise<ServiceProviderProfile | null> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getMyServiceProviderProfile();
+                return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getMyServiceProviderProfile();
+            return from_candid_opt_n6(this._uploadFile, this._downloadFile, result);
         }
     }
     async getProductCount(arg0: string, arg1: string): Promise<bigint> {
@@ -254,6 +318,48 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async getProviderChatMessages(arg0: string, arg1: string, arg2: string): Promise<Array<ChatMessage>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getProviderChatMessages(arg0, arg1, arg2);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getProviderChatMessages(arg0, arg1, arg2);
+            return result;
+        }
+    }
+    async getQuotesForSlot(arg0: string, arg1: string): Promise<Array<Quote>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getQuotesForSlot(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getQuotesForSlot(arg0, arg1);
+            return result;
+        }
+    }
+    async getSlotMembers(arg0: string, arg1: string): Promise<Array<Registration>> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.getSlotMembers(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.getSlotMembers(arg0, arg1);
+            return result;
+        }
+    }
     async getUserProfile(arg0: Principal): Promise<UserProfile | null> {
         if (this.processError) {
             try {
@@ -268,17 +374,17 @@ export class Backend implements backendInterface {
             return from_candid_opt_n3(this._uploadFile, this._downloadFile, result);
         }
     }
-    async initialize(): Promise<void> {
+    async hasSpPaidForSlot(arg0: string, arg1: string): Promise<boolean> {
         if (this.processError) {
             try {
-                const result = await this.actor.initialize();
+                const result = await this.actor.hasSpPaidForSlot(arg0, arg1);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await this.actor.initialize();
+            const result = await this.actor.hasSpPaidForSlot(arg0, arg1);
             return result;
         }
     }
@@ -296,6 +402,20 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async recordSpSlotPayment(arg0: string, arg1: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.recordSpSlotPayment(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.recordSpSlotPayment(arg0, arg1);
+            return result;
+        }
+    }
     async registerForProduct(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string, arg5: string): Promise<string> {
         if (this.processError) {
             try {
@@ -307,6 +427,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.registerForProduct(arg0, arg1, arg2, arg3, arg4, arg5);
+            return result;
+        }
+    }
+    async registerServiceProvider(arg0: ServiceProviderProfile): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.registerServiceProvider(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.registerServiceProvider(arg0);
             return result;
         }
     }
@@ -324,11 +458,56 @@ export class Backend implements backendInterface {
             return result;
         }
     }
+    async sendChatMessage(arg0: string, arg1: string, arg2: string, arg3: string, arg4: boolean): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.sendChatMessage(arg0, arg1, arg2, arg3, arg4);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.sendChatMessage(arg0, arg1, arg2, arg3, arg4);
+            return result;
+        }
+    }
+    async sendChatMessageAsProvider(arg0: string, arg1: string, arg2: string, arg3: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.sendChatMessageAsProvider(arg0, arg1, arg2, arg3);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.sendChatMessageAsProvider(arg0, arg1, arg2, arg3);
+            return result;
+        }
+    }
+    async submitQuote(arg0: string, arg1: string, arg2: string, arg3: string, arg4: string): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.submitQuote(arg0, arg1, arg2, arg3, arg4);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.submitQuote(arg0, arg1, arg2, arg3, arg4);
+            return result;
+        }
+    }
 }
 function from_candid_UserRole_n4(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: _UserRole): UserRole {
     return from_candid_variant_n5(_uploadFile, _downloadFile, value);
 }
 function from_candid_opt_n3(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_UserProfile]): UserProfile | null {
+    return value.length === 0 ? null : value[0];
+}
+function from_candid_opt_n6(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: [] | [_ServiceProviderProfile]): ServiceProviderProfile | null {
     return value.length === 0 ? null : value[0];
 }
 function from_candid_variant_n5(_uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, value: {

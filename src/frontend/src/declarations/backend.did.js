@@ -26,6 +26,32 @@ export const Registration = IDL.Record({
   'product' : IDL.Text,
 });
 export const UserProfile = IDL.Record({ 'name' : IDL.Text });
+export const ChatMessage = IDL.Record({
+  'id' : IDL.Nat,
+  'memberId' : IDL.Text,
+  'senderIsProvider' : IDL.Bool,
+  'slotKey' : IDL.Text,
+  'content' : IDL.Text,
+  'serviceProviderId' : IDL.Text,
+  'timestamp' : Time,
+});
+export const ServiceProviderProfile = IDL.Record({
+  'name' : IDL.Text,
+  'businessName' : IDL.Text,
+  'category' : IDL.Text,
+  'phone' : IDL.Text,
+});
+export const Quote = IDL.Record({
+  'id' : IDL.Nat,
+  'title' : IDL.Text,
+  'slotKey' : IDL.Text,
+  'serviceProviderId' : IDL.Text,
+  'businessName' : IDL.Text,
+  'description' : IDL.Text,
+  'timestamp' : Time,
+  'providerName' : IDL.Text,
+  'price' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
@@ -34,11 +60,36 @@ export const idlService = IDL.Service({
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
   'getCategories' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
+  'getChatMessages' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Vec(ChatMessage)],
+      ['query'],
+    ),
   'getMyRegistrations' : IDL.Func([], [IDL.Vec(Registration)], ['query']),
+  'getMyServiceProviderProfile' : IDL.Func(
+      [],
+      [IDL.Opt(ServiceProviderProfile)],
+      ['query'],
+    ),
   'getProductCount' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], ['query']),
   'getProductsForCategory' : IDL.Func(
       [IDL.Text],
       [IDL.Vec(IDL.Text)],
+      ['query'],
+    ),
+  'getProviderChatMessages' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Vec(ChatMessage)],
+      ['query'],
+    ),
+  'getQuotesForSlot' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Vec(Quote)],
+      ['query'],
+    ),
+  'getSlotMembers' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Vec(Registration)],
       ['query'],
     ),
   'getUserProfile' : IDL.Func(
@@ -46,14 +97,31 @@ export const idlService = IDL.Service({
       [IDL.Opt(UserProfile)],
       ['query'],
     ),
-  'initialize' : IDL.Func([], [], []),
+  'hasSpPaidForSlot' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'recordSpSlotPayment' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'registerForProduct' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
       [IDL.Text],
       [],
     ),
+  'registerServiceProvider' : IDL.Func([ServiceProviderProfile], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+  'sendChatMessage' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+      [],
+      [],
+    ),
+  'sendChatMessageAsProvider' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [],
+      [],
+    ),
+  'submitQuote' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [],
+      [],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -77,6 +145,32 @@ export const idlFactory = ({ IDL }) => {
     'product' : IDL.Text,
   });
   const UserProfile = IDL.Record({ 'name' : IDL.Text });
+  const ChatMessage = IDL.Record({
+    'id' : IDL.Nat,
+    'memberId' : IDL.Text,
+    'senderIsProvider' : IDL.Bool,
+    'slotKey' : IDL.Text,
+    'content' : IDL.Text,
+    'serviceProviderId' : IDL.Text,
+    'timestamp' : Time,
+  });
+  const ServiceProviderProfile = IDL.Record({
+    'name' : IDL.Text,
+    'businessName' : IDL.Text,
+    'category' : IDL.Text,
+    'phone' : IDL.Text,
+  });
+  const Quote = IDL.Record({
+    'id' : IDL.Nat,
+    'title' : IDL.Text,
+    'slotKey' : IDL.Text,
+    'serviceProviderId' : IDL.Text,
+    'businessName' : IDL.Text,
+    'description' : IDL.Text,
+    'timestamp' : Time,
+    'providerName' : IDL.Text,
+    'price' : IDL.Text,
+  });
   
   return IDL.Service({
     '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
@@ -85,11 +179,36 @@ export const idlFactory = ({ IDL }) => {
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
     'getCategories' : IDL.Func([], [IDL.Vec(IDL.Text)], ['query']),
+    'getChatMessages' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Vec(ChatMessage)],
+        ['query'],
+      ),
     'getMyRegistrations' : IDL.Func([], [IDL.Vec(Registration)], ['query']),
+    'getMyServiceProviderProfile' : IDL.Func(
+        [],
+        [IDL.Opt(ServiceProviderProfile)],
+        ['query'],
+      ),
     'getProductCount' : IDL.Func([IDL.Text, IDL.Text], [IDL.Nat], ['query']),
     'getProductsForCategory' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(IDL.Text)],
+        ['query'],
+      ),
+    'getProviderChatMessages' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Vec(ChatMessage)],
+        ['query'],
+      ),
+    'getQuotesForSlot' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Vec(Quote)],
+        ['query'],
+      ),
+    'getSlotMembers' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Vec(Registration)],
         ['query'],
       ),
     'getUserProfile' : IDL.Func(
@@ -97,14 +216,31 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(UserProfile)],
         ['query'],
       ),
-    'initialize' : IDL.Func([], [], []),
+    'hasSpPaidForSlot' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'recordSpSlotPayment' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'registerForProduct' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [IDL.Text],
         [],
       ),
+    'registerServiceProvider' : IDL.Func([ServiceProviderProfile], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
+    'sendChatMessage' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Bool],
+        [],
+        [],
+      ),
+    'sendChatMessageAsProvider' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [],
+        [],
+      ),
+    'submitQuote' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [],
+        [],
+      ),
   });
 };
 
