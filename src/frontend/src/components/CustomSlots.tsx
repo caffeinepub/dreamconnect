@@ -674,10 +674,8 @@ function SlotCardWrapper({
   const { data: isMember = false } = useIsCustomSlotMember(
     isAuthenticated ? slot.id : null,
   );
-  // We use members count from getCustomSlots which includes member count
-  // For now derive from maxMembers display — the backend should embed count
-  // We'll use a safe fallback of 0
-  const memberCount = 0;
+  const { data: members = [] } = useCustomSlotMembers(slot.id);
+  const memberCount = members.length;
 
   return (
     <CustomSlotCard

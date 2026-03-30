@@ -60,6 +60,32 @@ actor {
     timestamp : Time.Time;
   };
 
+  public type CustomSlot = {
+    id : Nat;
+    title : Text;
+    category : Text;
+    description : Text;
+    location : Text;
+    creatorId : Text;
+    maxMembers : Nat;
+    createdAt : Time.Time;
+  };
+
+  public type CustomSlotMember = {
+    slotId : Nat;
+    userId : Text;
+    name : Text;
+    phone : Text;
+    location : Text;
+    requirements : Text;
+    joinedAt : Time.Time;
+  };
+
+  public type PublicRegistration = {
+    product : Text;
+    location : Text;
+  };
+
   // ── Stable storage (survives upgrades / redeployments) ──────────────────────────────────────────────
   stable var stableRegistrations         : [Registration]                   = [];
   stable var stableQuotes                : [Quote]                          = [];
@@ -70,6 +96,9 @@ actor {
   stable var stableNextId                : Nat                              = 0;
   stable var stableNextQuoteId           : Nat                              = 0;
   stable var stableNextChatId            : Nat                              = 0;
+  stable var stableCustomSlots           : [CustomSlot]                     = [];
+  stable var stableCustomSlotMembers     : [CustomSlotMember]               = [];
+  stable var stableNextCustomSlotId      : Nat                              = 0;
 
   // ── In-memory working state (rebuilt from stable on every install) ─────────────────────────────────────────
   let registrations          = List.empty<Registration>();
@@ -82,6 +111,9 @@ actor {
   var nextChatId             = stableNextChatId;
   let categoriesMap = Map.empty<Text, [Text]>(); // kept for upgrade compatibility
   let spSlotPayments         = Map.empty<Principal, List.List<Text>>();
+  let customSlots            = List.empty<CustomSlot>();
+  let customSlotMembers      = List.empty<CustomSlotMember>();
+  var nextCustomSlotId       = stableNextCustomSlotId;
 
   // Restore on every install/upgrade
   for (r   in stableRegistrations.vals())        { registrations.add(r) };
@@ -94,6 +126,8 @@ actor {
     for (s in slots.vals()) { lst.add(s) };
     spSlotPayments.add(p, lst);
   };
+  for (cs  in stableCustomSlots.vals())          { customSlots.add(cs) };
+  for (csm in stableCustomSlotMembers.vals())    { customSlotMembers.add(csm) };
 
   // Persist to stable vars before any upgrade
   system func preupgrade() {
@@ -103,6 +137,9 @@ actor {
     stableNextId         := nextId;
     stableNextQuoteId    := nextQuoteId;
     stableNextChatId     := nextChatId;
+    stableCustomSlots    := customSlots.toArray();
+    stableCustomSlotMembers := customSlotMembers.toArray();
+    stableNextCustomSlotId := nextCustomSlotId;
 
     // Serialize userProfiles map
     let upBuf = List.empty<(Principal, UserProfile)>();
@@ -290,6 +327,13 @@ actor {
     registrations.filter(func(r) { r.category == category and r.product == product }).toArray();
   };
 
+  public query func getPublicRegistrationsForCategory(category : Text) : async [PublicRegistration] {
+    let filtered = registrations.filter(func(r) { r.category == category });
+    let mapped = List.empty<PublicRegistration>();
+    for (r in filtered.values()) { mapped.add({ product = r.product; location = r.location }) };
+    mapped.toArray();
+  };
+
   // ── Quotes ───────────────────────────────────────────────────────────────────────────────────────
 
   public shared ({ caller }) func submitQuote(
@@ -462,5 +506,107 @@ actor {
       case (null)  { false };
       case (?slots) { slots.values().any(func(key) { key == slotKey }) };
     };
+  };
+
+  // ── Custom Slots ─────────────────────────────────────────────────────────────────────────────────
+
+  public shared ({ caller }) func createCustomSlot(
+    title : Text,
+    category : Text,
+    description : Text,
+    location : Text,
+    maxMembers : Nat,
+  ) : async Nat {
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
+    if (title.size() == 0) { Runtime.trap("Title cannot be empty") };
+    if (location.size() == 0) { Runtime.trap("Location cannot be empty") };
+    let cappedMax = if (maxMembers > 50) { 50 } else if (maxMembers < 2) { 2 } else { maxMembers };
+    let slot : CustomSlot = {
+      id = nextCustomSlotId;
+      title;
+      category;
+      description;
+      location;
+      creatorId = toText(caller);
+      maxMembers = cappedMax;
+      createdAt = Time.now();
+    };
+    customSlots.add(slot);
+    let slotId = nextCustomSlotId;
+    nextCustomSlotId += 1;
+    slotId;
+  };
+
+  public query func getCustomSlots() : async [CustomSlot] {
+    customSlots.toArray();
+  };
+
+  public query func getCustomSlotsForCategory(category : Text) : async [CustomSlot] {
+    customSlots.filter(func(s) { s.category == category }).toArray();
+  };
+
+  public shared ({ caller }) func joinCustomSlot(
+    slotId : Nat,
+    name : Text,
+    phone : Text,
+    location : Text,
+    requirements : Text,
+  ) : async Text {
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
+    if (name.size() == 0) { Runtime.trap("Name cannot be empty") };
+    if (phone.size() == 0) { Runtime.trap("Phone cannot be empty") };
+    if (location.size() == 0) { Runtime.trap("Location cannot be empty") };
+
+    // Find the slot
+    var found = false;
+    var maxMembers : Nat = 0;
+    for (s in customSlots.values()) {
+      if (s.id == slotId) {
+        found := true;
+        maxMembers := s.maxMembers;
+      };
+    };
+    if (not found) { Runtime.trap("Slot not found") };
+
+    let callerId = toText(caller);
+
+    // Check already a member
+    let alreadyMember = customSlotMembers.values().any(func(m) {
+      m.slotId == slotId and m.userId == callerId
+    });
+    if (alreadyMember) { Runtime.trap("You are already a member of this slot") };
+
+    // Check capacity
+    let currentCount = customSlotMembers.filter(func(m) { m.slotId == slotId }).size();
+    if (currentCount >= maxMembers) { Runtime.trap("Slot is full") };
+
+    let member : CustomSlotMember = {
+      slotId;
+      userId = callerId;
+      name;
+      phone;
+      location;
+      requirements;
+      joinedAt = Time.now();
+    };
+    customSlotMembers.add(member);
+    "Joined slot successfully";
+  };
+
+  public query ({ caller }) func getCustomSlotMembers(slotId : Nat) : async [CustomSlotMember] {
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Please sign in") };
+    customSlotMembers.filter(func(m) { m.slotId == slotId }).toArray();
+  };
+
+  public query ({ caller }) func isCustomSlotMember(slotId : Nat) : async Bool {
+    if (caller.isAnonymous()) { return false };
+    let callerId = toText(caller);
+    customSlotMembers.values().any(func(m) {
+      m.slotId == slotId and m.userId == callerId
+    });
+  };
+
+  public query func getCustomSlotMemberCount(slotId : Nat) : async Nat {
+    customSlotMembers.filter(func(m) { m.slotId == slotId }).size();
   };
 };
