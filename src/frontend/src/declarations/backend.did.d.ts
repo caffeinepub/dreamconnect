@@ -49,6 +49,7 @@ export interface ServiceProviderProfile {
 }
 export type Time = bigint;
 export interface UserProfile { 'name' : string }
+export interface PublicRegistration { 'product' : string, 'location' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
@@ -95,6 +96,7 @@ export interface _SERVICE {
     [string, string, string, string, string],
     undefined
   >,
+  'getPublicRegistrationsForCategory' : ActorMethod<[string], Array<PublicRegistration>>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

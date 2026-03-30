@@ -974,6 +974,7 @@ function HomePage({
   const isLoading = productsLoading || countsLoading;
 
   const [cityFilter, setCityFilter] = useState("");
+  const [locationLoading, setLocationLoading] = useState(false);
   const { data: publicRegs = [] } =
     usePublicRegistrationsForCategory(activeCategory);
   const filteredProducts = cityFilter.trim()
@@ -985,6 +986,52 @@ function HomePage({
         );
       })
     : displayProducts;
+
+  const detectNearbyCity = () => {
+    if (!navigator.geolocation) {
+      toast.error("Location not supported on this browser");
+      return;
+    }
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const { latitude, longitude } = pos.coords;
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            { headers: { "Accept-Language": "en" } },
+          );
+          const data = await res.json();
+          const city =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.village ||
+            data.address?.county ||
+            "";
+          if (city) {
+            setCityFilter(city);
+          } else {
+            toast.error("Could not detect city from your location");
+          }
+        } catch {
+          toast.error("Failed to detect location");
+        } finally {
+          setLocationLoading(false);
+        }
+      },
+      (err) => {
+        setLocationLoading(false);
+        if (err.code === err.PERMISSION_DENIED) {
+          toast.error(
+            "Location permission denied. Please enable location in browser settings.",
+          );
+        } else {
+          toast.error("Could not get your location");
+        }
+      },
+      { timeout: 8000 },
+    );
+  };
 
   if (viewSlot) {
     const cat = CATEGORIES.find((c) => c.id === viewSlot.category);
@@ -1077,6 +1124,20 @@ function HomePage({
             className="pl-8 h-9 text-sm bg-muted/50 border-border"
           />
         </div>
+        <button
+          type="button"
+          data-ocid="home.near_me_button"
+          onClick={detectNearbyCity}
+          disabled={locationLoading}
+          className="flex items-center gap-1 px-3 h-9 text-xs font-medium rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+        >
+          {locationLoading ? (
+            <Loader2 size={12} className="animate-spin" />
+          ) : (
+            <MapPin size={12} />
+          )}
+          Near Me
+        </button>
         {cityFilter && (
           <button
             type="button"

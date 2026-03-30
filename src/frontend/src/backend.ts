@@ -186,6 +186,7 @@ export interface backendInterface {
     getCustomSlotMembers(slotId: bigint): Promise<Array<CustomSlotMember>>;
     isCustomSlotMember(slotId: bigint): Promise<boolean>;
     getCustomSlotMemberCount(slotId: bigint): Promise<bigint>;
+    getPublicRegistrationsForCategory(category: string): Promise<Array<{ product: string; location: string }>>;
 }
 import type { ServiceProviderProfile as _ServiceProviderProfile, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -621,6 +622,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await (this.actor as any).getCustomSlotMemberCount(arg0);
+            return result;
+        }
+    }
+    async getPublicRegistrationsForCategory(arg0: string): Promise<Array<{ product: string; location: string }>> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).getPublicRegistrationsForCategory(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).getPublicRegistrationsForCategory(arg0);
             return result;
         }
     }

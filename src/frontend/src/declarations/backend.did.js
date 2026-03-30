@@ -71,6 +71,10 @@ export const CustomSlotMember = IDL.Record({
   'requirements' : IDL.Text,
   'joinedAt' : Time,
 });
+export const PublicRegistration = IDL.Record({
+  'product' : IDL.Text,
+  'location' : IDL.Text,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
@@ -164,6 +168,11 @@ export const idlService = IDL.Service({
     ),
   'isCustomSlotMember' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
   'getCustomSlotMemberCount' : IDL.Func([IDL.Nat], [IDL.Nat], ['query']),
+  'getPublicRegistrationsForCategory' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(PublicRegistration)],
+      ['query'],
+    ),
 });
 
 export const idlInitArgs = [];
@@ -231,6 +240,10 @@ export const idlFactory = ({ IDL }) => {
     'location' : IDL.Text,
     'requirements' : IDL.Text,
     'joinedAt' : Time,
+  });
+  const PublicRegistration = IDL.Record({
+    'product' : IDL.Text,
+    'location' : IDL.Text,
   });
   
   return IDL.Service({
@@ -325,6 +338,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'isCustomSlotMember' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
     'getCustomSlotMemberCount' : IDL.Func([IDL.Nat], [IDL.Nat], ['query']),
+    'getPublicRegistrationsForCategory' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(PublicRegistration)],
+        ['query'],
+      ),
   });
 };
 
