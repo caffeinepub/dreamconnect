@@ -52,6 +52,25 @@ export const Quote = IDL.Record({
   'providerName' : IDL.Text,
   'price' : IDL.Text,
 });
+export const CustomSlot = IDL.Record({
+  'id' : IDL.Nat,
+  'title' : IDL.Text,
+  'category' : IDL.Text,
+  'description' : IDL.Text,
+  'location' : IDL.Text,
+  'creatorId' : IDL.Text,
+  'maxMembers' : IDL.Nat,
+  'createdAt' : Time,
+});
+export const CustomSlotMember = IDL.Record({
+  'slotId' : IDL.Nat,
+  'memberId' : IDL.Text,
+  'name' : IDL.Text,
+  'phone' : IDL.Text,
+  'location' : IDL.Text,
+  'requirements' : IDL.Text,
+  'joinedAt' : Time,
+});
 
 export const idlService = IDL.Service({
   '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
@@ -122,6 +141,29 @@ export const idlService = IDL.Service({
       [],
       [],
     ),
+  'createCustomSlot' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
+      [IDL.Nat],
+      [],
+    ),
+  'getCustomSlots' : IDL.Func([], [IDL.Vec(CustomSlot)], ['query']),
+  'getCustomSlotsForCategory' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(CustomSlot)],
+      ['query'],
+    ),
+  'joinCustomSlot' : IDL.Func(
+      [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Text],
+      [],
+    ),
+  'getCustomSlotMembers' : IDL.Func(
+      [IDL.Nat],
+      [IDL.Vec(CustomSlotMember)],
+      ['query'],
+    ),
+  'isCustomSlotMember' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
+  'getCustomSlotMemberCount' : IDL.Func([IDL.Nat], [IDL.Nat], ['query']),
 });
 
 export const idlInitArgs = [];
@@ -170,6 +212,25 @@ export const idlFactory = ({ IDL }) => {
     'timestamp' : Time,
     'providerName' : IDL.Text,
     'price' : IDL.Text,
+  });
+  const CustomSlot = IDL.Record({
+    'id' : IDL.Nat,
+    'title' : IDL.Text,
+    'category' : IDL.Text,
+    'description' : IDL.Text,
+    'location' : IDL.Text,
+    'creatorId' : IDL.Text,
+    'maxMembers' : IDL.Nat,
+    'createdAt' : Time,
+  });
+  const CustomSlotMember = IDL.Record({
+    'slotId' : IDL.Nat,
+    'memberId' : IDL.Text,
+    'name' : IDL.Text,
+    'phone' : IDL.Text,
+    'location' : IDL.Text,
+    'requirements' : IDL.Text,
+    'joinedAt' : Time,
   });
   
   return IDL.Service({
@@ -241,6 +302,29 @@ export const idlFactory = ({ IDL }) => {
         [],
         [],
       ),
+    'createCustomSlot' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
+        [IDL.Nat],
+        [],
+      ),
+    'getCustomSlots' : IDL.Func([], [IDL.Vec(CustomSlot)], ['query']),
+    'getCustomSlotsForCategory' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(CustomSlot)],
+        ['query'],
+      ),
+    'joinCustomSlot' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Text],
+        [],
+      ),
+    'getCustomSlotMembers' : IDL.Func(
+        [IDL.Nat],
+        [IDL.Vec(CustomSlotMember)],
+        ['query'],
+      ),
+    'isCustomSlotMember' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
+    'getCustomSlotMemberCount' : IDL.Func([IDL.Nat], [IDL.Nat], ['query']),
   });
 };
 
