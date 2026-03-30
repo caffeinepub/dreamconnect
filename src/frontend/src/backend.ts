@@ -135,6 +135,25 @@ export enum UserRole {
     user = "user",
     guest = "guest"
 }
+export interface CustomSlot {
+    id: bigint;
+    title: string;
+    category: string;
+    description: string;
+    location: string;
+    creatorId: string;
+    maxMembers: bigint;
+    createdAt: bigint;
+}
+export interface CustomSlotMember {
+    slotId: bigint;
+    userId: string;
+    name: string;
+    phone: string;
+    location: string;
+    requirements: string;
+    joinedAt: bigint;
+}
 export interface backendInterface {
     _initializeAccessControlWithSecret(userSecret: string): Promise<void>;
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
@@ -160,6 +179,13 @@ export interface backendInterface {
     sendChatMessage(category: string, product: string, serviceProviderId: string, content: string, senderIsProvider: boolean): Promise<void>;
     sendChatMessageAsProvider(category: string, product: string, memberId: string, content: string): Promise<void>;
     submitQuote(category: string, product: string, title: string, description: string, price: string): Promise<void>;
+    createCustomSlot(title: string, category: string, description: string, location: string, maxMembers: bigint): Promise<bigint>;
+    getCustomSlots(): Promise<Array<CustomSlot>>;
+    getCustomSlotsForCategory(category: string): Promise<Array<CustomSlot>>;
+    joinCustomSlot(slotId: bigint, name: string, phone: string, location: string, requirements: string): Promise<string>;
+    getCustomSlotMembers(slotId: bigint): Promise<Array<CustomSlotMember>>;
+    isCustomSlotMember(slotId: bigint): Promise<boolean>;
+    getCustomSlotMemberCount(slotId: bigint): Promise<bigint>;
 }
 import type { ServiceProviderProfile as _ServiceProviderProfile, UserProfile as _UserProfile, UserRole as _UserRole } from "./declarations/backend.did.d.ts";
 export class Backend implements backendInterface {
@@ -497,6 +523,104 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.submitQuote(arg0, arg1, arg2, arg3, arg4);
+            return result;
+        }
+    }
+    async createCustomSlot(arg0: string, arg1: string, arg2: string, arg3: string, arg4: bigint): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).createCustomSlot(arg0, arg1, arg2, arg3, arg4);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).createCustomSlot(arg0, arg1, arg2, arg3, arg4);
+            return result;
+        }
+    }
+    async getCustomSlots(): Promise<Array<CustomSlot>> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).getCustomSlots();
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).getCustomSlots();
+            return result;
+        }
+    }
+    async getCustomSlotsForCategory(arg0: string): Promise<Array<CustomSlot>> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).getCustomSlotsForCategory(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).getCustomSlotsForCategory(arg0);
+            return result;
+        }
+    }
+    async joinCustomSlot(arg0: bigint, arg1: string, arg2: string, arg3: string, arg4: string): Promise<string> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).joinCustomSlot(arg0, arg1, arg2, arg3, arg4);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).joinCustomSlot(arg0, arg1, arg2, arg3, arg4);
+            return result;
+        }
+    }
+    async getCustomSlotMembers(arg0: bigint): Promise<Array<CustomSlotMember>> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).getCustomSlotMembers(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).getCustomSlotMembers(arg0);
+            return result;
+        }
+    }
+    async isCustomSlotMember(arg0: bigint): Promise<boolean> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).isCustomSlotMember(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).isCustomSlotMember(arg0);
+            return result;
+        }
+    }
+    async getCustomSlotMemberCount(arg0: bigint): Promise<bigint> {
+        if (this.processError) {
+            try {
+                const result = await (this.actor as any).getCustomSlotMemberCount(arg0);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await (this.actor as any).getCustomSlotMemberCount(arg0);
             return result;
         }
     }
