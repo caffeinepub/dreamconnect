@@ -60,43 +60,120 @@ actor {
     timestamp : Time.Time;
   };
 
-  // Kept for upgrade compatibility (was previously used)
-  let categoriesMap = Map.empty<Text, [Text]>();
-  let registrations = List.empty<Registration>();
-  let userProfiles = Map.empty<Principal, UserProfile>();
+  // ── Stable storage (survives upgrades / redeployments) ──────────────────────────────────────────────
+  stable var stableRegistrations         : [Registration]                   = [];
+  stable var stableQuotes                : [Quote]                          = [];
+  stable var stableChatMessages          : [ChatMessage]                    = [];
+  stable var stableUserProfiles          : [(Principal, UserProfile)]       = [];
+  stable var stableSPProfiles            : [(Principal, ServiceProviderProfile)] = [];
+  stable var stableSpSlotPayments        : [(Principal, [Text])]            = [];
+  stable var stableNextId                : Nat                              = 0;
+  stable var stableNextQuoteId           : Nat                              = 0;
+  stable var stableNextChatId            : Nat                              = 0;
+
+  // ── In-memory working state (rebuilt from stable on every install) ─────────────────────────────────────────
+  let registrations          = List.empty<Registration>();
+  let userProfiles           = Map.empty<Principal, UserProfile>();
   let serviceProviderProfiles = Map.empty<Principal, ServiceProviderProfile>();
-  let quotes = List.empty<Quote>();
-  let chatMessages = List.empty<ChatMessage>();
-  var nextId = 0;
-  var nextQuoteId = 0;
-  var nextChatId = 0;
+  let quotes                 = List.empty<Quote>();
+  let chatMessages           = List.empty<ChatMessage>();
+  var nextId                 = stableNextId;
+  var nextQuoteId            = stableNextQuoteId;
+  var nextChatId             = stableNextChatId;
+  let categoriesMap = Map.empty<Text, [Text]>(); // kept for upgrade compatibility
+  let spSlotPayments         = Map.empty<Principal, List.List<Text>>();
 
-  // New state: track which slots (category#product) each service provider has paid for
-  let spSlotPayments = Map.empty<Principal, List.List<Text>>();
-
-  func toText(p : Principal) : Text {
-    p.toText();
+  // Restore on every install/upgrade
+  for (r   in stableRegistrations.vals())        { registrations.add(r) };
+  for (q   in stableQuotes.vals())               { quotes.add(q) };
+  for (m   in stableChatMessages.vals())         { chatMessages.add(m) };
+  for ((p, prof) in stableUserProfiles.vals())   { userProfiles.add(p, prof) };
+  for ((p, prof) in stableSPProfiles.vals())     { serviceProviderProfiles.add(p, prof) };
+  for ((p, slots) in stableSpSlotPayments.vals()) {
+    let lst = List.empty<Text>();
+    for (s in slots.vals()) { lst.add(s) };
+    spSlotPayments.add(p, lst);
   };
 
-  func makeSlotKey(category : Text, product : Text) : Text {
-    category # "_" # product;
+  // Persist to stable vars before any upgrade
+  system func preupgrade() {
+    stableRegistrations  := registrations.toArray();
+    stableQuotes         := quotes.toArray();
+    stableChatMessages   := chatMessages.toArray();
+    stableNextId         := nextId;
+    stableNextQuoteId    := nextQuoteId;
+    stableNextChatId     := nextChatId;
+
+    // Serialize userProfiles map
+    let upBuf = List.empty<(Principal, UserProfile)>();
+    for ((p, prof) in userProfiles.entries()) { upBuf.add((p, prof)) };
+    stableUserProfiles := upBuf.toArray();
+
+    // Serialize serviceProviderProfiles map
+    let spBuf = List.empty<(Principal, ServiceProviderProfile)>();
+    for ((p, prof) in serviceProviderProfiles.entries()) { spBuf.add((p, prof)) };
+    stableSPProfiles := spBuf.toArray();
+
+    // Serialize spSlotPayments map
+    let payBuf = List.empty<(Principal, [Text])>();
+    for ((p, lst) in spSlotPayments.entries()) { payBuf.add((p, lst.toArray())) };
+    stableSpSlotPayments := payBuf.toArray();
   };
+
+  system func postupgrade() {};
+
+  // ── Helpers ────────────────────────────────────────────────────────────────────────────────────
+
+  func toText(p : Principal) : Text { p.toText() };
+
+  func makeSlotKey(category : Text, product : Text) : Text { category # "_" # product };
 
   func arrayContains(arr : [Text], value : Text) : Bool {
-    for (item in arr.vals()) {
-      if (item == value) { return true };
-    };
+    for (item in arr.vals()) { if (item == value) { return true } };
     false;
   };
 
   func getProductsForCategoryInternal(category : Text) : [Text] {
     switch (category) {
-      case ("Electronics") { ["Mobile", "Laptop", "TV", "Refrigerator", "AC", "Washing Machine", "Chimney", "Speakers"] };
-      case ("Cars") { ["Hatchback", "Sedan", "SUV", "MUV", "Luxury Car", "Electric Car", "Sports Car", "Pickup Truck"] };
-      case ("Interior Designing") { ["Living Room", "Bedroom", "Kitchen", "Bathroom", "Office", "Kids Room", "Balcony", "Dining Room"] };
-      case ("Furniture") { ["Sofa", "Bed", "Wardrobe", "Dining Table", "Office Chair", "Bookshelf", "TV Unit", "Shoe Rack"] };
-      case ("Real Estate") { ["Apartment", "Villa", "Plot", "Commercial Space", "Studio", "Penthouse", "Farmhouse", "Warehouse"] };
-      case (_) { [] };
+      // Merged Electronics & Appliances
+      case ("Electronics & Appliances") {
+        [
+          "Mobile", "Laptop", "TV", "Speakers", "Camera", "Headphones", "Smartwatch", "Gaming Console",
+          "Refrigerator", "Washing Machine", "AC", "Microwave", "Geyser", "Dishwasher",
+          "Water Purifier", "Chimney", "Air Purifier", "Oven"
+        ]
+      };
+      // Backward compatibility for old registrations
+      case ("Electronics") {
+        ["Mobile", "Laptop", "TV", "Speakers", "Camera", "Headphones", "Smartwatch", "Gaming Console"]
+      };
+      case ("Appliances") {
+        ["Refrigerator", "Washing Machine", "AC", "Microwave", "Geyser", "Dishwasher", "Water Purifier", "Chimney", "Air Purifier", "Oven"]
+      };
+      // Vehicles with type-prefixed brands
+      case ("Vehicles") {
+        [
+          "Car - Maruti Suzuki", "Car - Hyundai", "Car - Tata", "Car - Honda",
+          "Car - Toyota", "Car - Mahindra", "Car - Kia", "Car - Skoda", "Car - MG", "Car - Volkswagen",
+          "Bike - Royal Enfield", "Bike - Bajaj", "Bike - Hero", "Bike - TVS",
+          "Bike - Honda", "Bike - Yamaha", "Bike - KTM",
+          "Truck - Tata", "Truck - Ashok Leyland", "Truck - Mahindra", "Truck - Eicher",
+          "Bus - Volvo", "Bus - Tata", "Bus - Ashok Leyland",
+          "Heavy Equipment - JCB", "Heavy Equipment - CAT", "Heavy Equipment - Komatsu", "Heavy Equipment - Escorts",
+          "Three Wheeler - Bajaj", "Three Wheeler - Piaggio", "Three Wheeler - TVS"
+        ]
+      };
+      case ("Interior Designing")       { ["Living Room", "Bedroom", "Kitchen", "Bathroom", "Office", "Kids Room", "Balcony", "Dining Room"] };
+      case ("Furniture")                { ["Sofa", "Bed", "Wardrobe", "Dining Table", "Office Chair", "Bookshelf", "TV Unit", "Shoe Rack"] };
+      case ("Real Estate")              { ["Apartment", "Villa", "Plot", "Commercial Space", "Studio", "Penthouse", "Farmhouse", "Warehouse"] };
+      case ("Gym")                      { ["Treadmill", "Dumbbells", "Bench Press", "Elliptical", "Rowing Machine", "Pull-up Bar", "Resistance Bands", "Yoga Mat", "Exercise Bike", "Kettlebells"] };
+      case ("Courses")                  { ["Programming", "Design", "Digital Marketing", "Finance", "Language", "Photography", "Music", "Cooking", "Fitness", "Business"] };
+      case ("Medical")                  { ["General Physician", "Dentist", "Physiotherapy", "Eye Care", "Skin Care", "Diagnostics", "Nursing Care", "Mental Health", "Nutrition", "Paediatrics"] };
+      case ("Beauty")                   { ["Hair Care", "Skin Care", "Makeup", "Nail Care", "Spa", "Waxing", "Bridal Package", "Massage", "Facial", "Eyebrow Threading"] };
+      case ("Construction Materials")   { ["Cement", "Steel", "Bricks", "Sand", "Tiles", "Paint", "Glass", "Plywood", "Pipes", "Electrical Fittings"] };
+      case ("Business Services")        { ["Accounting", "Legal", "HR", "IT Support", "Marketing", "Logistics", "Printing", "Security", "Cleaning", "Consulting"] };
+      case ("Decor")                    { ["Curtains", "Rugs", "Lighting", "Wall Art", "Planters", "Cushions", "Mirrors", "Clocks", "Photo Frames", "Vases"] };
+      case (_)                          { [] };
     };
   };
 
@@ -104,7 +181,6 @@ actor {
     if (caller.isAnonymous()) { return false };
     switch (accessControlState.userRoles.get(caller)) {
       case (null) {
-        // First real user becomes admin, rest become regular users
         if (not accessControlState.adminAssigned) {
           accessControlState.userRoles.add(caller, #admin);
           accessControlState.adminAssigned := true;
@@ -116,6 +192,8 @@ actor {
     };
     true;
   };
+
+  // ── User profiles ────────────────────────────────────────────────────────────────────────────────────
 
   public query ({ caller }) func getCallerUserProfile() : async ?UserProfile {
     if (caller.isAnonymous()) { Runtime.trap("Unauthorized") };
@@ -130,33 +208,33 @@ actor {
   };
 
   public shared ({ caller }) func saveCallerUserProfile(profile : UserProfile) : async () {
-    if (not ensureRegistered(caller)) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
     userProfiles.add(caller, profile);
   };
 
+  // ── Service provider profiles ──────────────────────────────────────────────────────────────────────────────────────
+
   public query ({ caller }) func getMyServiceProviderProfile() : async ?ServiceProviderProfile {
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Please sign in") };
     serviceProviderProfiles.get(caller);
   };
 
   public shared ({ caller }) func registerServiceProvider(profile : ServiceProviderProfile) : async () {
-    if (not ensureRegistered(caller)) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
     serviceProviderProfiles.add(caller, profile);
   };
 
+  // ── Categories & products ──────────────────────────────────────────────────────────────────────────────────────
+
   public query func getCategories() : async [Text] {
-    ["Electronics", "Cars", "Interior Designing", "Furniture", "Real Estate"];
+    ["Electronics & Appliances", "Vehicles", "Interior Designing", "Furniture", "Real Estate", "Gym", "Courses", "Medical", "Beauty", "Construction Materials", "Business Services", "Decor"];
   };
 
   public query func getProductsForCategory(category : Text) : async [Text] {
     getProductsForCategoryInternal(category);
   };
+
+  // ── Registrations ─────────────────────────────────────────────────────────────────────────────────────
 
   public shared ({ caller }) func registerForProduct(
     category : Text,
@@ -166,22 +244,14 @@ actor {
     location : Text,
     requirements : Text,
   ) : async Text {
-    if (not ensureRegistered(caller)) {
-      Runtime.trap("Unauthorized: Please sign in first");
-    };
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in first") };
 
     let validProducts = getProductsForCategoryInternal(category);
-    if (validProducts.size() == 0) {
-      Runtime.trap("Invalid category");
-    };
-    if (not arrayContains(validProducts, product)) {
-      Runtime.trap("Invalid product for this category");
-    };
+    if (validProducts.size() == 0) { Runtime.trap("Invalid category") };
+    if (not arrayContains(validProducts, product)) { Runtime.trap("Invalid product for this category") };
 
     let count = registrations.filter(func(r) { r.category == category and r.product == product }).size();
-    if (count >= 20) {
-      Runtime.trap("Product registration limit reached");
-    };
+    if (count >= 20) { Runtime.trap("Product registration limit reached") };
 
     let registration : Registration = {
       id = nextId;
@@ -194,7 +264,6 @@ actor {
       requirements;
       timestamp = Time.now();
     };
-
     registrations.add(registration);
     nextId += 1;
     "Registration successful";
@@ -205,9 +274,7 @@ actor {
   };
 
   public query ({ caller }) func getMyRegistrations() : async [Registration] {
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Please sign in") };
     registrations.filter(func(r) { r.userId == toText(caller) }).toArray();
   };
 
@@ -219,12 +286,11 @@ actor {
   };
 
   public query ({ caller }) func getSlotMembers(category : Text, product : Text) : async [Registration] {
-    // Only authenticated users and service providers can view slot members
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Please sign in to view slot members");
-    };
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Please sign in to view slot members") };
     registrations.filter(func(r) { r.category == category and r.product == product }).toArray();
   };
+
+  // ── Quotes ───────────────────────────────────────────────────────────────────────────────────────
 
   public shared ({ caller }) func submitQuote(
     category : Text,
@@ -233,28 +299,19 @@ actor {
     description : Text,
     price : Text,
   ) : async () {
-    if (not ensureRegistered(caller)) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
 
-    // Verify caller is a registered service provider
     let profile = switch (serviceProviderProfiles.get(caller)) {
       case (null) { Runtime.trap("Unauthorized: Not a registered service provider") };
-      case (?p) { p };
+      case (?p)   { p };
     };
 
-    // Verify service provider has paid for this slot
     let slotKey = makeSlotKey(category, product);
     let hasPaid = switch (spSlotPayments.get(caller)) {
-      case (null) { false };
-      case (?slots) {
-        slots.values().any(func(key) { key == slotKey });
-      };
+      case (null)  { false };
+      case (?slots) { slots.values().any(func(key) { key == slotKey }) };
     };
-
-    if (not hasPaid) {
-      Runtime.trap("Unauthorized: You must pay for this slot before submitting quotes");
-    };
+    if (not hasPaid) { Runtime.trap("Unauthorized: You must pay for this slot before submitting quotes") };
 
     let quote : Quote = {
       id = nextQuoteId;
@@ -272,13 +329,12 @@ actor {
   };
 
   public query ({ caller }) func getQuotesForSlot(category : Text, product : Text) : async [Quote] {
-    // Only authenticated users can view quotes
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Please sign in to view quotes");
-    };
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Please sign in to view quotes") };
     let slotKey = makeSlotKey(category, product);
     quotes.filter(func(q) { q.slotKey == slotKey }).toArray();
   };
+
+  // ── Chat ────────────────────────────────────────────────────────────────────────────────────────
 
   public shared ({ caller }) func sendChatMessage(
     category : Text,
@@ -287,25 +343,17 @@ actor {
     content : Text,
     senderIsProvider : Bool,
   ) : async () {
-    if (not ensureRegistered(caller)) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
+
+    if (senderIsProvider) { Runtime.trap("Use sendChatMessageAsProvider for service providers") };
 
     let slotKey = makeSlotKey(category, product);
     let callerId = toText(caller);
 
-    if (senderIsProvider) {
-      Runtime.trap("Use sendChatMessageAsProvider for service providers");
-    };
-
-    // Verify the caller is a registered member of this slot
     let isRegistered = registrations.values().any(func(r) {
       r.userId == callerId and r.category == category and r.product == product
     });
-
-    if (not isRegistered) {
-      Runtime.trap("Unauthorized: You must be registered for this slot to send messages");
-    };
+    if (not isRegistered) { Runtime.trap("Unauthorized: You must be registered for this slot to send messages") };
 
     let msg : ChatMessage = {
       id = nextChatId;
@@ -326,28 +374,19 @@ actor {
     memberId : Text,
     content : Text,
   ) : async () {
-    if (not ensureRegistered(caller)) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
 
-    // Verify caller is a registered service provider
     let _profile = switch (serviceProviderProfiles.get(caller)) {
       case (null) { Runtime.trap("Unauthorized: Not a registered service provider") };
-      case (?p) { p };
+      case (?p)   { p };
     };
 
-    // Verify service provider has paid for this slot
     let slotKey = makeSlotKey(category, product);
     let hasPaid = switch (spSlotPayments.get(caller)) {
-      case (null) { false };
-      case (?slots) {
-        slots.values().any(func(key) { key == slotKey });
-      };
+      case (null)  { false };
+      case (?slots) { slots.values().any(func(key) { key == slotKey }) };
     };
-
-    if (not hasPaid) {
-      Runtime.trap("Unauthorized: You must pay for this slot before sending messages");
-    };
+    if (not hasPaid) { Runtime.trap("Unauthorized: You must pay for this slot before sending messages") };
 
     let msg : ChatMessage = {
       id = nextChatId;
@@ -367,13 +406,9 @@ actor {
     product : Text,
     serviceProviderId : Text,
   ) : async [ChatMessage] {
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Please sign in") };
     let slotKey = makeSlotKey(category, product);
     let callerId = toText(caller);
-
-    // User can only see their own chat messages with a specific provider
     chatMessages.filter(func(m) {
       m.slotKey == slotKey and
       m.serviceProviderId == serviceProviderId and
@@ -386,20 +421,13 @@ actor {
     product : Text,
     memberId : Text,
   ) : async [ChatMessage] {
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
-
-    // Verify caller is a service provider
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Please sign in") };
     switch (serviceProviderProfiles.get(caller)) {
       case (null) { Runtime.trap("Unauthorized: Not a registered service provider") };
-      case (?_) {};
+      case (?_)   {};
     };
-
     let slotKey = makeSlotKey(category, product);
     let callerId = toText(caller);
-
-    // Provider can only see messages where they are the service provider
     chatMessages.filter(func(m) {
       m.slotKey == slotKey and
       m.serviceProviderId == callerId and
@@ -407,50 +435,32 @@ actor {
     }).toArray();
   };
 
-  // New function: record SP slot payment (category + product)
-  public shared ({ caller }) func recordSpSlotPayment(category : Text, product : Text) : async () {
-    if (not ensureRegistered(caller)) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
+  // ── Service provider slot payments ───────────────────────────────────────────────────────────────────────────
 
-    // Verify caller is a registered service provider
+  public shared ({ caller }) func recordSpSlotPayment(category : Text, product : Text) : async () {
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
     switch (serviceProviderProfiles.get(caller)) {
       case (null) { Runtime.trap("Unauthorized: You must be a registered service provider to pay for slots") };
-      case (?_) {};
+      case (?_)   {};
     };
-
-    // Validate category and product using hardcoded logic
     let validProducts = getProductsForCategoryInternal(category);
-    if (validProducts.size() == 0) {
-      Runtime.trap("Invalid category");
-    };
-    if (not arrayContains(validProducts, product)) {
-      Runtime.trap("Invalid product for this category");
-    };
-
+    if (validProducts.size() == 0) { Runtime.trap("Invalid category") };
+    if (not arrayContains(validProducts, product)) { Runtime.trap("Invalid product for this category") };
     let slotKey = makeSlotKey(category, product);
-
-    // Add the slot key to the service provider's paid slots (no deduplication)
     let currentList = switch (spSlotPayments.get(caller)) {
-      case (null) { List.empty<Text>() };
+      case (null)  { List.empty<Text>() };
       case (?list) { list };
     };
     currentList.add(slotKey);
     spSlotPayments.add(caller, currentList);
   };
 
-  // New query: check if the caller has paid for a specific slot
   public query ({ caller }) func hasSpPaidForSlot(category : Text, product : Text) : async Bool {
-    if (caller.isAnonymous()) {
-      Runtime.trap("Unauthorized: Please sign in");
-    };
-
+    if (caller.isAnonymous()) { Runtime.trap("Unauthorized: Please sign in") };
     let slotKey = makeSlotKey(category, product);
     switch (spSlotPayments.get(caller)) {
-      case (null) { false };
-      case (?slots) {
-        slots.values().any(func(key) { key == slotKey });
-      };
+      case (null)  { false };
+      case (?slots) { slots.values().any(func(key) { key == slotKey }) };
     };
   };
 };

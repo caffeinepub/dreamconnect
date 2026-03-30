@@ -1,3 +1,4 @@
+import { CustomSlotsSection } from "@/components/CustomSlots";
 import { ProviderHomeScreen } from "@/components/ProviderView";
 import { SlotDetailPage } from "@/components/SlotDetailPage";
 import { Button } from "@/components/ui/button";
@@ -13,20 +14,29 @@ import {
 } from "@tanstack/react-query";
 import {
   Armchair,
+  BookOpen,
   Briefcase,
   Building2,
   Car,
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  Dumbbell,
+  FlameKindling,
+  Flower2,
+  HardHat,
+  Heart,
+  Home,
   IndianRupee,
   Loader2,
   LogOut,
+  MapPin,
   Monitor,
   Phone,
   Shield,
   Smartphone,
   Sofa,
+  Stethoscope,
   User,
   Users,
   Zap,
@@ -36,6 +46,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
+  type PublicRegistration,
   type Registration,
   type ServiceProviderProfile,
   useAllRegistrations,
@@ -45,22 +56,27 @@ import {
   useMyServiceProviderProfile,
   useProductCounts,
   useProductsForCategory,
+  usePublicRegistrationsForCategory,
   useRegisterForProduct,
   useRegisterServiceProvider,
   useSaveCallerUserProfile,
 } from "./hooks/useQueries";
-import { openRazorpayCheckout } from "./utils/razorpay";
 
 const queryClient = new QueryClient();
 
 const CATEGORIES = [
   {
-    id: "Electronics",
-    label: "Electronics",
+    id: "Electronics & Appliances",
+    label: "Electronics & Appliances",
     icon: Monitor,
     color: "oklch(0.6 0.2 230)",
   },
-  { id: "Cars", label: "Cars", icon: Car, color: "oklch(0.72 0.19 55)" },
+  {
+    id: "Vehicles",
+    label: "Vehicles",
+    icon: Car,
+    color: "oklch(0.72 0.19 55)",
+  },
   {
     id: "Interior Designing",
     label: "Interior Designing",
@@ -79,28 +95,93 @@ const CATEGORIES = [
     icon: Building2,
     color: "oklch(0.62 0.22 28)",
   },
+  { id: "Gym", label: "Gym", icon: Dumbbell, color: "oklch(0.62 0.22 18)" },
+  {
+    id: "Courses",
+    label: "Courses",
+    icon: BookOpen,
+    color: "oklch(0.65 0.18 160)",
+  },
+  {
+    id: "Medical",
+    label: "Medical",
+    icon: Stethoscope,
+    color: "oklch(0.60 0.20 10)",
+  },
+  {
+    id: "Beauty",
+    label: "Beauty",
+    icon: Flower2,
+    color: "oklch(0.68 0.18 350)",
+  },
+  {
+    id: "Construction Materials",
+    label: "Construction",
+    icon: HardHat,
+    color: "oklch(0.68 0.17 70)",
+  },
+  {
+    id: "Business Services",
+    label: "Business",
+    icon: Briefcase,
+    color: "oklch(0.60 0.15 250)",
+  },
+  { id: "Decor", label: "Decor", icon: Home, color: "oklch(0.65 0.15 290)" },
 ];
 
 const FALLBACK_PRODUCTS: Record<string, string[]> = {
-  Electronics: [
+  "Electronics & Appliances": [
     "Mobile",
     "Laptop",
     "TV",
-    "Refrigerator",
-    "AC",
-    "Washing Machine",
-    "Chimney",
     "Speakers",
+    "Camera",
+    "Headphones",
+    "Smartwatch",
+    "Gaming Console",
+    "Refrigerator",
+    "Washing Machine",
+    "AC",
+    "Microwave",
+    "Geyser",
+    "Dishwasher",
+    "Water Purifier",
+    "Chimney",
+    "Air Purifier",
+    "Oven",
   ],
-  Cars: [
-    "Hatchback",
-    "Sedan",
-    "SUV",
-    "MUV",
-    "Luxury Car",
-    "Electric Car",
-    "Sports Car",
-    "Pickup Truck",
+  Vehicles: [
+    "Car - Maruti Suzuki",
+    "Car - Hyundai",
+    "Car - Tata",
+    "Car - Honda",
+    "Car - Toyota",
+    "Car - Mahindra",
+    "Car - Kia",
+    "Car - Skoda",
+    "Car - MG",
+    "Car - Volkswagen",
+    "Bike - Royal Enfield",
+    "Bike - Bajaj",
+    "Bike - Hero",
+    "Bike - TVS",
+    "Bike - Honda",
+    "Bike - Yamaha",
+    "Bike - KTM",
+    "Truck - Tata",
+    "Truck - Ashok Leyland",
+    "Truck - Mahindra",
+    "Truck - Eicher",
+    "Bus - Volvo",
+    "Bus - Tata",
+    "Bus - Ashok Leyland",
+    "Heavy Equipment - JCB",
+    "Heavy Equipment - CAT",
+    "Heavy Equipment - Komatsu",
+    "Heavy Equipment - Escorts",
+    "Three Wheeler - Bajaj",
+    "Three Wheeler - Piaggio",
+    "Three Wheeler - TVS",
   ],
   "Interior Designing": [
     "Living Room",
@@ -131,6 +212,90 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Penthouse",
     "Farmhouse",
     "Warehouse",
+  ],
+  Gym: [
+    "Treadmill",
+    "Dumbbells",
+    "Bench Press",
+    "Elliptical",
+    "Rowing Machine",
+    "Pull-up Bar",
+    "Resistance Bands",
+    "Yoga Mat",
+    "Exercise Bike",
+    "Kettlebells",
+  ],
+  Courses: [
+    "Programming",
+    "Design",
+    "Digital Marketing",
+    "Finance",
+    "Language",
+    "Photography",
+    "Music",
+    "Cooking",
+    "Fitness",
+    "Business",
+  ],
+  Medical: [
+    "General Physician",
+    "Dentist",
+    "Physiotherapy",
+    "Eye Care",
+    "Skin Care",
+    "Diagnostics",
+    "Nursing Care",
+    "Mental Health",
+    "Nutrition",
+    "Paediatrics",
+  ],
+  Beauty: [
+    "Hair Care",
+    "Skin Care",
+    "Makeup",
+    "Nail Care",
+    "Spa",
+    "Waxing",
+    "Bridal Package",
+    "Massage",
+    "Facial",
+    "Eyebrow Threading",
+  ],
+  "Construction Materials": [
+    "Cement",
+    "Steel",
+    "Bricks",
+    "Sand",
+    "Tiles",
+    "Paint",
+    "Glass",
+    "Plywood",
+    "Pipes",
+    "Electrical Fittings",
+  ],
+  "Business Services": [
+    "Accounting",
+    "Legal",
+    "HR",
+    "IT Support",
+    "Marketing",
+    "Logistics",
+    "Printing",
+    "Security",
+    "Cleaning",
+    "Consulting",
+  ],
+  Decor: [
+    "Curtains",
+    "Rugs",
+    "Lighting",
+    "Wall Art",
+    "Planters",
+    "Cushions",
+    "Mirrors",
+    "Clocks",
+    "Photo Frames",
+    "Vases",
   ],
 };
 
@@ -403,6 +568,38 @@ function ProfileSetupModal({ onComplete }: { onComplete: () => void }) {
   );
 }
 
+// ===== REQUIREMENTS PLACEHOLDER HELPER =====
+function getRequirementsPlaceholder(category: string, product: string): string {
+  switch (category) {
+    case "Vehicles":
+      return `e.g. I am planning to buy a ${product.split(" - ")[1] || product} before 21st March, budget ₹8 lakhs, prefer automatic transmission`;
+    case "Real Estate":
+      return "e.g. Looking to buy a 2BHK flat by end of April, budget ₹45 lakhs, preferred area is Koramangala";
+    case "Electronics & Appliances":
+      return `e.g. Need a ${product} before summer, budget ₹35,000, prefer energy-saving 5-star rating`;
+    case "Gym":
+      return `e.g. Need a ${product} by next month, budget ₹20,000, prefer commercial grade`;
+    case "Courses":
+      return `e.g. Looking to join a ${product} course before March end, budget ₹5,000, prefer weekend batches`;
+    case "Medical":
+      return `e.g. Need a ${product} consultation this week, near my location, prefer home visit`;
+    case "Beauty":
+      return "e.g. Looking for bridal makeup package for April 15th wedding, budget ₹15,000";
+    case "Interior Designing":
+      return "e.g. Need complete living room design for 1500 sqft flat, budget ₹2 lakhs, by May";
+    case "Furniture":
+      return `e.g. Need a ${product} before next month, budget ₹30,000, prefer solid wood`;
+    case "Construction Materials":
+      return `e.g. Need ${product} for foundation work by next week, quantity 500 units`;
+    case "Business Services":
+      return `e.g. Need ${product} services by March 31st, budget ₹5,000 per month`;
+    case "Decor":
+      return "e.g. Looking for living room decor items, budget ₹10,000, prefer earthy tones";
+    default:
+      return "Describe what you're looking for, your budget, and expected timeline...";
+  }
+}
+
 // ===== REGISTRATION MODAL =====
 interface RegModalProps {
   product: string;
@@ -415,11 +612,14 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
   const [requirements, setRequirements] = useState("");
+  const [requirementDate, setRequirementDate] = useState("");
   const [submitted, setSubmitted] = useState(false);
-  const [paying, setPaying] = useState(false);
   const register = useRegisterForProduct();
 
   const doRegister = async () => {
+    const fullRequirements = requirementDate
+      ? `${requirements} [Expected by: ${new Date(requirementDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}]`
+      : requirements;
     try {
       await register.mutateAsync({
         category,
@@ -427,7 +627,7 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
         name,
         phone,
         location,
-        requirements,
+        requirements: fullRequirements,
       });
       setSubmitted(true);
       toast.success(`Registered for ${product}!`);
@@ -448,22 +648,8 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
       toast.error("Please fill in all fields");
       return;
     }
-    setPaying(true);
-    openRazorpayCheckout({
-      amount: 45,
-      description: `Registration fee for ${product} (${category})`,
-      onSuccess: async (_paymentId: string) => {
-        setPaying(false);
-        await doRegister();
-      },
-      onFailure: () => {
-        setPaying(false);
-        toast.error("Payment failed. Please try again.");
-      },
-    }).catch(() => {
-      setPaying(false);
-      toast.error("Payment gateway unavailable. Please try again.");
-    });
+    // Payments temporarily disabled for testing
+    await doRegister();
   };
 
   const cat = CATEGORIES.find((c) => c.id === category);
@@ -572,6 +758,20 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
                 />
               </div>
               <div className="space-y-1.5">
+                <Label htmlFor="reg-date" className="text-sm font-medium">
+                  Expected Date / Timeline
+                </Label>
+                <Input
+                  id="reg-date"
+                  data-ocid="register.date_input"
+                  type="date"
+                  value={requirementDate}
+                  onChange={(e) => setRequirementDate(e.target.value)}
+                  className="bg-muted border-border focus:border-primary"
+                  min={new Date().toISOString().split("T")[0]}
+                />
+              </div>
+              <div className="space-y-1.5">
                 <Label htmlFor="reg-req" className="text-sm font-medium">
                   Requirements
                 </Label>
@@ -580,7 +780,7 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
                   data-ocid="register.requirements_textarea"
                   value={requirements}
                   onChange={(e) => setRequirements(e.target.value)}
-                  placeholder="Describe what you're looking for..."
+                  placeholder={getRequirementsPlaceholder(category, product)}
                   rows={3}
                   className="bg-muted border-border focus:border-primary resize-none"
                 />
@@ -588,25 +788,24 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
               <div className="rounded-xl bg-muted/50 border border-border px-3 py-2 flex items-center gap-2 text-xs text-muted-foreground">
                 <IndianRupee size={12} className="text-primary flex-shrink-0" />
                 <span>
-                  Registration fee:{" "}
-                  <strong className="text-foreground">₹45</strong> (paid via
-                  Razorpay)
+                  <strong className="text-amber-400">
+                    Payments temporarily disabled for testing. Registration is
+                    free.
+                  </strong>
                 </span>
               </div>
               <Button
                 type="submit"
                 data-ocid="register.submit_button"
-                disabled={register.isPending || paying}
+                disabled={register.isPending}
                 className="w-full bg-primary text-primary-foreground font-bold text-base py-5 rounded-xl mt-1"
               >
-                {register.isPending || paying ? (
+                {register.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                {paying
-                  ? "Processing Payment..."
-                  : register.isPending
-                    ? "Registering..."
-                    : "Pay ₹45 & Register"}
+                {register.isPending
+                  ? "Registering..."
+                  : "Register (Free - Testing)"}
               </Button>
             </form>
           )}
@@ -756,7 +955,9 @@ function HomePage({
   isAuthenticated,
   onAuthRequired,
 }: { isAuthenticated: boolean; onAuthRequired: () => void }) {
-  const [activeCategory, setActiveCategory] = useState("Electronics");
+  const [activeCategory, setActiveCategory] = useState(
+    "Electronics & Appliances",
+  );
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [viewSlot, setViewSlot] = useState<SelectedSlot | null>(null);
 
@@ -771,6 +972,19 @@ function HomePage({
   const { data: myRegistrations = [] } = useMyRegistrations();
 
   const isLoading = productsLoading || countsLoading;
+
+  const [cityFilter, setCityFilter] = useState("");
+  const { data: publicRegs = [] } =
+    usePublicRegistrationsForCategory(activeCategory);
+  const filteredProducts = cityFilter.trim()
+    ? displayProducts.filter((product) => {
+        const lower = cityFilter.trim().toLowerCase();
+        return publicRegs.some(
+          (r: PublicRegistration) =>
+            r.product === product && r.location.toLowerCase().includes(lower),
+        );
+      })
+    : displayProducts;
 
   if (viewSlot) {
     const cat = CATEGORIES.find((c) => c.id === viewSlot.category);
@@ -848,6 +1062,33 @@ function HomePage({
         })()}
       </motion.div>
 
+      {/* City Filter */}
+      <div className="flex items-center gap-2 mb-4">
+        <div className="relative flex-1 max-w-xs">
+          <MapPin
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            data-ocid="home.city_filter_input"
+            placeholder="Filter by city (e.g. Mumbai)"
+            value={cityFilter}
+            onChange={(e) => setCityFilter(e.target.value)}
+            className="pl-8 h-9 text-sm bg-muted/50 border-border"
+          />
+        </div>
+        {cityFilter && (
+          <button
+            type="button"
+            data-ocid="home.city_filter_clear"
+            onClick={() => setCityFilter("")}
+            className="text-xs text-muted-foreground hover:text-foreground"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       {/* Product Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -857,7 +1098,7 @@ function HomePage({
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {displayProducts.map((product, i) => (
+          {filteredProducts.map((product, i) => (
             <ProductCard
               key={product}
               product={product}
@@ -884,6 +1125,10 @@ function HomePage({
           />
         )}
       </AnimatePresence>
+
+      <div className="mt-12">
+        <CustomSlotsSection isAuthenticated={isAuthenticated} />
+      </div>
     </main>
   );
 }
@@ -1288,7 +1533,7 @@ function ServiceProviderSetupModal({
 }) {
   const [name, setName] = useState("");
   const [businessName, setBusinessName] = useState("");
-  const [category, setCategory] = useState("Electronics");
+  const [category, setCategory] = useState("Electronics & Appliances");
   const [phone, setPhone] = useState("");
   const registerSP = useRegisterServiceProvider();
 
@@ -1370,11 +1615,18 @@ function ServiceProviderSetupModal({
               className="w-full h-10 px-3 rounded-xl bg-muted border border-border focus:border-primary text-sm text-foreground focus:outline-none"
             >
               {[
-                "Electronics",
-                "Cars",
+                "Electronics & Appliances",
+                "Vehicles",
                 "Interior Designing",
                 "Furniture",
                 "Real Estate",
+                "Gym",
+                "Courses",
+                "Medical",
+                "Beauty",
+                "Construction Materials",
+                "Business Services",
+                "Decor",
               ].map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -1499,7 +1751,10 @@ function LetzclubApp() {
   if (isInitializing) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <Loader2 size={36} className="animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }

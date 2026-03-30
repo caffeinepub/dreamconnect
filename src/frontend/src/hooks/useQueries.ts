@@ -399,3 +399,136 @@ export function useRecordSpSlotPayment() {
     },
   });
 }
+
+// ===== CUSTOM SLOT HOOKS =====
+
+export interface CustomSlot {
+  id: bigint;
+  title: string;
+  category: string;
+  description: string;
+  location: string;
+  creatorId: string;
+  maxMembers: bigint;
+  createdAt: bigint;
+}
+
+export interface CustomSlotMember {
+  slotId: bigint;
+  userId: string;
+  name: string;
+  phone: string;
+  location: string;
+  requirements: string;
+  joinedAt: bigint;
+}
+
+export interface PublicRegistration {
+  product: string;
+  location: string;
+}
+
+export function useCustomSlots() {
+  const { actor, isFetching } = useActor();
+  return useQuery<CustomSlot[]>({
+    queryKey: ["customSlots"],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).getCustomSlots();
+    },
+    enabled: !!actor && !isFetching,
+    refetchInterval: 15000,
+  });
+}
+
+export function useCreateCustomSlot() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      title: string;
+      category: string;
+      description: string;
+      location: string;
+      maxMembers: number;
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return (actor as any).createCustomSlot(
+        vars.title,
+        vars.category,
+        vars.description,
+        vars.location,
+        BigInt(vars.maxMembers),
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customSlots"] });
+    },
+  });
+}
+
+export function useJoinCustomSlot() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (vars: {
+      slotId: bigint;
+      name: string;
+      phone: string;
+      location: string;
+      requirements: string;
+    }) => {
+      if (!actor) throw new Error("Not connected");
+      return (actor as any).joinCustomSlot(
+        vars.slotId,
+        vars.name,
+        vars.phone,
+        vars.location,
+        vars.requirements,
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customSlots"] });
+      queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
+      queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
+    },
+  });
+}
+
+export function useCustomSlotMembers(slotId: bigint | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<CustomSlotMember[]>({
+    queryKey: ["customSlotMembers", slotId?.toString()],
+    queryFn: async () => {
+      if (!actor || slotId === null) return [];
+      return (actor as any).getCustomSlotMembers(slotId);
+    },
+    enabled: !!actor && !isFetching && slotId !== null,
+    refetchInterval: 15000,
+  });
+}
+
+export function useIsCustomSlotMember(slotId: bigint | null) {
+  const { actor, isFetching } = useActor();
+  return useQuery<boolean>({
+    queryKey: ["isCustomSlotMember", slotId?.toString()],
+    queryFn: async () => {
+      if (!actor || slotId === null) return false;
+      return (actor as any).isCustomSlotMember(slotId);
+    },
+    enabled: !!actor && !isFetching && slotId !== null,
+  });
+}
+
+export function usePublicRegistrationsForCategory(category: string) {
+  const { actor, isFetching } = useActor();
+  return useQuery<PublicRegistration[]>({
+    queryKey: ["publicRegs", category],
+    queryFn: async () => {
+      if (!actor) return [];
+      return (actor as any).getPublicRegistrationsForCategory(category);
+    },
+    enabled: !!actor && !isFetching && !!category,
+    staleTime: 30000,
+  });
+}

@@ -48,6 +48,29 @@ export interface ServiceProviderProfile {
     category: string;
     phone: string;
 }
+export interface CustomSlot {
+    id: bigint;
+    title: string;
+    category: string;
+    description: string;
+    location: string;
+    creatorId: string;
+    maxMembers: bigint;
+    createdAt: Time;
+}
+export interface CustomSlotMember {
+    slotId: bigint;
+    userId: string;
+    name: string;
+    phone: string;
+    location: string;
+    requirements: string;
+    joinedAt: Time;
+}
+export interface PublicRegistration {
+    product: string;
+    location: string;
+}
 export enum UserRole {
     admin = "admin",
     user = "user",
@@ -65,6 +88,7 @@ export interface backendInterface {
     getProductCount(category: string, product: string): Promise<bigint>;
     getProductsForCategory(category: string): Promise<Array<string>>;
     getProviderChatMessages(category: string, product: string, memberId: string): Promise<Array<ChatMessage>>;
+    getPublicRegistrationsForCategory(category: string): Promise<Array<PublicRegistration>>;
     getQuotesForSlot(category: string, product: string): Promise<Array<Quote>>;
     getSlotMembers(category: string, product: string): Promise<Array<Registration>>;
     getUserProfile(user: Principal): Promise<UserProfile | null>;
@@ -77,4 +101,11 @@ export interface backendInterface {
     sendChatMessage(category: string, product: string, serviceProviderId: string, content: string, senderIsProvider: boolean): Promise<void>;
     sendChatMessageAsProvider(category: string, product: string, memberId: string, content: string): Promise<void>;
     submitQuote(category: string, product: string, title: string, description: string, price: string): Promise<void>;
+    createCustomSlot(title: string, category: string, description: string, location: string, maxMembers: bigint): Promise<bigint>;
+    getCustomSlots(): Promise<Array<CustomSlot>>;
+    getCustomSlotsForCategory(category: string): Promise<Array<CustomSlot>>;
+    joinCustomSlot(slotId: bigint, name: string, phone: string, location: string, requirements: string): Promise<string>;
+    getCustomSlotMembers(slotId: bigint): Promise<Array<CustomSlotMember>>;
+    isCustomSlotMember(slotId: bigint): Promise<boolean>;
+    getCustomSlotMemberCount(slotId: bigint): Promise<bigint>;
 }

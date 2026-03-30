@@ -19,7 +19,6 @@ import {
   useSlotMembers,
   useSubmitQuote,
 } from "@/hooks/useQueries";
-import { openRazorpayCheckout } from "@/utils/razorpay";
 import {
   ArrowLeft,
   Briefcase,
@@ -37,33 +36,73 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 const CATEGORIES = [
-  { id: "Electronics", color: "oklch(0.6 0.2 230)" },
-  { id: "Cars", color: "oklch(0.72 0.19 55)" },
+  { id: "Electronics & Appliances", color: "oklch(0.6 0.2 230)" },
+  { id: "Vehicles", color: "oklch(0.72 0.19 55)" },
   { id: "Interior Designing", color: "oklch(0.65 0.18 310)" },
   { id: "Furniture", color: "oklch(0.62 0.15 145)" },
   { id: "Real Estate", color: "oklch(0.62 0.22 28)" },
+  { id: "Gym", color: "oklch(0.62 0.22 18)" },
+  { id: "Courses", color: "oklch(0.65 0.18 160)" },
+  { id: "Medical", color: "oklch(0.60 0.20 10)" },
+  { id: "Beauty", color: "oklch(0.68 0.18 350)" },
+  { id: "Construction Materials", color: "oklch(0.68 0.17 70)" },
+  { id: "Business Services", color: "oklch(0.60 0.15 250)" },
+  { id: "Decor", color: "oklch(0.65 0.15 290)" },
 ];
 
 const FALLBACK_PRODUCTS: Record<string, string[]> = {
-  Electronics: [
+  "Electronics & Appliances": [
     "Mobile",
     "Laptop",
     "TV",
-    "Refrigerator",
-    "AC",
-    "Washing Machine",
-    "Chimney",
     "Speakers",
+    "Camera",
+    "Headphones",
+    "Smartwatch",
+    "Gaming Console",
+    "Refrigerator",
+    "Washing Machine",
+    "AC",
+    "Microwave",
+    "Geyser",
+    "Dishwasher",
+    "Water Purifier",
+    "Chimney",
+    "Air Purifier",
+    "Oven",
   ],
-  Cars: [
-    "Hatchback",
-    "Sedan",
-    "SUV",
-    "MUV",
-    "Luxury Car",
-    "Electric Car",
-    "Sports Car",
-    "Pickup Truck",
+  Vehicles: [
+    "Car - Maruti Suzuki",
+    "Car - Hyundai",
+    "Car - Tata",
+    "Car - Honda",
+    "Car - Toyota",
+    "Car - Mahindra",
+    "Car - Kia",
+    "Car - Skoda",
+    "Car - MG",
+    "Car - Volkswagen",
+    "Bike - Royal Enfield",
+    "Bike - Bajaj",
+    "Bike - Hero",
+    "Bike - TVS",
+    "Bike - Honda",
+    "Bike - Yamaha",
+    "Bike - KTM",
+    "Truck - Tata",
+    "Truck - Ashok Leyland",
+    "Truck - Mahindra",
+    "Truck - Eicher",
+    "Bus - Volvo",
+    "Bus - Tata",
+    "Bus - Ashok Leyland",
+    "Heavy Equipment - JCB",
+    "Heavy Equipment - CAT",
+    "Heavy Equipment - Komatsu",
+    "Heavy Equipment - Escorts",
+    "Three Wheeler - Bajaj",
+    "Three Wheeler - Piaggio",
+    "Three Wheeler - TVS",
   ],
   "Interior Designing": [
     "Living Room",
@@ -95,6 +134,90 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Farmhouse",
     "Warehouse",
   ],
+  Gym: [
+    "Treadmill",
+    "Dumbbells",
+    "Bench Press",
+    "Elliptical",
+    "Rowing Machine",
+    "Pull-up Bar",
+    "Resistance Bands",
+    "Yoga Mat",
+    "Exercise Bike",
+    "Kettlebells",
+  ],
+  Courses: [
+    "Programming",
+    "Design",
+    "Digital Marketing",
+    "Finance",
+    "Language",
+    "Photography",
+    "Music",
+    "Cooking",
+    "Fitness",
+    "Business",
+  ],
+  Medical: [
+    "General Physician",
+    "Dentist",
+    "Physiotherapy",
+    "Eye Care",
+    "Skin Care",
+    "Diagnostics",
+    "Nursing Care",
+    "Mental Health",
+    "Nutrition",
+    "Paediatrics",
+  ],
+  Beauty: [
+    "Hair Care",
+    "Skin Care",
+    "Makeup",
+    "Nail Care",
+    "Spa",
+    "Waxing",
+    "Bridal Package",
+    "Massage",
+    "Facial",
+    "Eyebrow Threading",
+  ],
+  "Construction Materials": [
+    "Cement",
+    "Steel",
+    "Bricks",
+    "Sand",
+    "Tiles",
+    "Paint",
+    "Glass",
+    "Plywood",
+    "Pipes",
+    "Electrical Fittings",
+  ],
+  "Business Services": [
+    "Accounting",
+    "Legal",
+    "HR",
+    "IT Support",
+    "Marketing",
+    "Logistics",
+    "Printing",
+    "Security",
+    "Cleaning",
+    "Consulting",
+  ],
+  Decor: [
+    "Curtains",
+    "Rugs",
+    "Lighting",
+    "Wall Art",
+    "Planters",
+    "Cushions",
+    "Mirrors",
+    "Clocks",
+    "Photo Frames",
+    "Vases",
+  ],
 };
 
 const MAX_SLOTS = 20;
@@ -124,32 +247,16 @@ function SlotPaymentGate({
 
   const handlePay = async () => {
     setPaying(true);
-    openRazorpayCheckout({
-      amount: 1000,
-      description: `Unlock slot: ${product} (${category})`,
-      onSuccess: async (_paymentId) => {
-        try {
-          await recordPayment.mutateAsync({ category, product });
-          toast.success(
-            "Slot unlocked! You can now submit your offer and chat.",
-          );
-          onUnlocked();
-        } catch {
-          toast.error(
-            "Payment recorded but slot activation failed. Contact support.",
-          );
-        } finally {
-          setPaying(false);
-        }
-      },
-      onFailure: () => {
-        toast.error("Payment failed or cancelled. Please try again.");
-        setPaying(false);
-      },
-    }).catch(() => {
-      toast.error("Payment gateway unavailable. Please try again.");
+    try {
+      // Payments temporarily disabled for testing
+      await recordPayment.mutateAsync({ category, product });
+      toast.success("Slot unlocked! You can now submit your offer and chat.");
+      onUnlocked();
+    } catch {
+      toast.error("Slot activation failed. Please try again.");
+    } finally {
       setPaying(false);
-    });
+    }
   };
 
   return (
@@ -185,6 +292,9 @@ function SlotPaymentGate({
           </div>
         ))}
       </div>
+      <div className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/30 px-3 py-2 text-xs text-amber-400 font-medium text-center">
+        Payments temporarily disabled for testing. Unlock is free.
+      </div>
       <Button
         data-ocid="provider_slot.pay_unlock_button"
         onClick={handlePay}
@@ -194,13 +304,10 @@ function SlotPaymentGate({
         {paying ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Processing...
+            Unlocking...
           </>
         ) : (
-          <>
-            <IndianRupee size={16} className="mr-1" />
-            Pay &#8377;1,000 &amp; Unlock Slot
-          </>
+          <>Unlock Slot (Free - Testing)</>
         )}
       </Button>
     </motion.div>
@@ -697,7 +804,7 @@ export function ProviderHomeScreen({
 }) {
   const [selectedSlot, setSelectedSlot] = useState<SelectedSlot | null>(null);
   const [activeCategory, setActiveCategory] = useState(
-    spProfile.category || "Electronics",
+    spProfile.category || "Electronics & Appliances",
   );
 
   const { data: products = [], isLoading: productsLoading } =
