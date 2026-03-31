@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Loader2, MapPin, Plus, Tag, Users } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   useCreateCustomSlot,
@@ -29,6 +29,15 @@ const SLOT_CATEGORIES = [
   "Construction Materials",
   "Business Services",
   "Decor",
+  "Home Services",
+  "Travel",
+  "Agriculture",
+  "Food & Catering",
+  "Events & Entertainment",
+  "Sports & Recreation",
+  "Pets & Animals",
+  "Printing & Stationery",
+  "Logistics & Transport",
   "Other",
 ];
 
@@ -45,6 +54,15 @@ const CATEGORY_COLORS: Record<string, string> = {
   "Construction Materials": "oklch(0.68 0.17 70)",
   "Business Services": "oklch(0.60 0.15 250)",
   Decor: "oklch(0.65 0.15 290)",
+  "Home Services": "oklch(0.64 0.18 195)",
+  Travel: "oklch(0.65 0.22 220)",
+  Agriculture: "oklch(0.62 0.20 135)",
+  "Food & Catering": "oklch(0.70 0.20 50)",
+  "Events & Entertainment": "oklch(0.65 0.22 300)",
+  "Sports & Recreation": "oklch(0.64 0.22 145)",
+  "Pets & Animals": "oklch(0.68 0.18 80)",
+  "Printing & Stationery": "oklch(0.60 0.15 240)",
+  "Logistics & Transport": "oklch(0.62 0.18 25)",
   Other: "oklch(0.60 0.12 258)",
 };
 
@@ -81,6 +99,18 @@ function CustomSlotCard({
 }: CustomSlotCardProps) {
   const color = getCategoryColor(slot.category);
   const isFull = memberCount >= Number(slot.maxMembers);
+  const pct = Math.min(
+    100,
+    Number(slot.maxMembers) > 0
+      ? (memberCount / Number(slot.maxMembers)) * 100
+      : 0,
+  );
+  const barColor =
+    pct >= 80
+      ? "oklch(0.65 0.2 25)"
+      : pct >= 50
+        ? "oklch(0.75 0.18 70)"
+        : "oklch(0.65 0.2 145)";
 
   return (
     <motion.div
@@ -127,13 +157,29 @@ function CustomSlotCard({
           <MapPin size={11} className="flex-shrink-0" />
           {slot.location || "Location not specified"}
         </span>
-        <span className="flex items-center gap-1 ml-auto">
-          <Users size={11} className="flex-shrink-0" />
-          <span className={isFull ? "text-destructive font-semibold" : ""}>
-            {memberCount} / {Number(slot.maxMembers)}
-          </span>
-          <span>members</span>
-        </span>
+      </div>
+
+      {/* Progress bar */}
+      <div className="mt-1">
+        <div
+          className="flex justify-between text-xs mb-1"
+          style={{ color: "oklch(0.65 0.05 258)" }}
+        >
+          <span>{memberCount} members joined</span>
+          <span>{Number(slot.maxMembers)} max</span>
+        </div>
+        <div
+          className="h-1.5 rounded-full overflow-hidden"
+          style={{ background: "oklch(0.22 0.02 258)" }}
+        >
+          <motion.div
+            className="h-full rounded-full"
+            style={{ background: barColor }}
+            initial={{ width: 0 }}
+            animate={{ width: `${pct}%` }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+          />
+        </div>
       </div>
 
       {/* Actions */}
@@ -188,26 +234,57 @@ function CreateSlotModal({ onClose }: CreateSlotModalProps) {
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [maxMembers, setMaxMembers] = useState(20);
+  const [creatorName, setCreatorName] = useState("");
+  const [creatorPhone, setCreatorPhone] = useState("");
+  const [creatorRequirements, setCreatorRequirements] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const createSlot = useCreateCustomSlot();
+  const joinSlot = useJoinCustomSlot();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !location.trim()) {
-      toast.error("Title and location are required");
+    if (
+      !title.trim() ||
+      !location.trim() ||
+      !creatorName.trim() ||
+      !creatorPhone.trim()
+    ) {
+      toast.error("Title, location, name, and phone are required");
       return;
     }
+    setIsSubmitting(true);
     try {
-      await createSlot.mutateAsync({
+      const result = await createSlot.mutateAsync({
         title: title.trim(),
         category,
         description: description.trim(),
         location: location.trim(),
         maxMembers,
       });
-      toast.success("Community slot created!");
+      // Auto-join creator as first member
+      const slotId = result as bigint;
+      await joinSlot.mutateAsync({
+        slotId,
+        name: creatorName.trim(),
+        phone: creatorPhone.trim(),
+        location: location.trim(),
+        requirements: creatorRequirements.trim(),
+      });
+      toast.success(
+        "Community slot created! You've been added as the first member.",
+      );
       onClose();
-    } catch {
-      toast.error("Failed to create slot. Please try again.");
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : String(err);
+      const trapMatch =
+        raw.match(/ic0\.trap with message:\s*(.+?)(?:\s*\n|$)/i) ||
+        raw.match(/message['": \s]+([^'"]{5,120})/i);
+      const msg = trapMatch ? trapMatch[1].trim() : raw;
+      toast.error(
+        msg.length < 160 ? msg : "Failed to create slot. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -222,7 +299,7 @@ function CreateSlotModal({ onClose }: CreateSlotModalProps) {
       />
       <motion.div
         data-ocid="create_slot.dialog"
-        className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden"
+        className="relative w-full max-w-md rounded-2xl border border-border bg-card shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
@@ -321,6 +398,69 @@ function CreateSlotModal({ onClose }: CreateSlotModalProps) {
               />
             </div>
 
+            {/* Creator details — auto-join as first member */}
+            <div className="border-t border-border pt-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                Your Details (you'll be added as first member)
+              </p>
+
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="cs-creator-name"
+                    className="text-sm font-medium"
+                  >
+                    Your Name <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="cs-creator-name"
+                    data-ocid="create_slot.creator_name_input"
+                    value={creatorName}
+                    onChange={(e) => setCreatorName(e.target.value)}
+                    placeholder="Your full name"
+                    className="bg-muted border-border focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="cs-creator-phone"
+                    className="text-sm font-medium"
+                  >
+                    Your Phone Number{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Input
+                    id="cs-creator-phone"
+                    data-ocid="create_slot.creator_phone_input"
+                    value={creatorPhone}
+                    onChange={(e) => setCreatorPhone(e.target.value)}
+                    placeholder="+91 9876543210"
+                    type="tel"
+                    className="bg-muted border-border focus:border-primary"
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="cs-creator-req"
+                    className="text-sm font-medium"
+                  >
+                    Your Requirements
+                  </Label>
+                  <Textarea
+                    id="cs-creator-req"
+                    data-ocid="create_slot.creator_requirements_textarea"
+                    value={creatorRequirements}
+                    onChange={(e) => setCreatorRequirements(e.target.value)}
+                    placeholder="Describe what you're looking for..."
+                    rows={2}
+                    className="bg-muted border-border focus:border-primary resize-none"
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <Label htmlFor="cs-max" className="text-sm font-medium">
                 Max Members
@@ -342,16 +482,28 @@ function CreateSlotModal({ onClose }: CreateSlotModalProps) {
               <p className="text-xs text-muted-foreground">Max 50 members</p>
             </div>
 
+            {/* Fee info banner */}
+            <div
+              className="flex items-center gap-2 text-xs rounded-lg px-3 py-2"
+              style={{
+                background: "oklch(0.2 0.05 145 / 0.3)",
+                color: "oklch(0.75 0.15 145)",
+              }}
+            >
+              <span>🎉</span>
+              <span>Free for Testing — slot creation fee will apply later</span>
+            </div>
+
             <Button
               type="submit"
               data-ocid="create_slot.submit_button"
-              disabled={createSlot.isPending}
+              disabled={isSubmitting}
               className="w-full bg-primary text-primary-foreground font-bold h-12 rounded-xl"
             >
-              {createSlot.isPending ? (
+              {isSubmitting ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              {createSlot.isPending ? "Creating..." : "Create Slot"}
+              {isSubmitting ? "Creating..." : "Create Slot"}
             </Button>
           </form>
         </div>
@@ -508,6 +660,18 @@ function JoinSlotModal({ slot, onClose }: JoinSlotModalProps) {
               />
             </div>
 
+            {/* Fee info banner */}
+            <div
+              className="flex items-center gap-2 text-xs rounded-lg px-3 py-2"
+              style={{
+                background: "oklch(0.2 0.05 145 / 0.3)",
+                color: "oklch(0.75 0.15 145)",
+              }}
+            >
+              <span>🎉</span>
+              <span>Free for Testing — slot joining fee will apply later</span>
+            </div>
+
             <Button
               type="submit"
               data-ocid="join_slot.submit_button"
@@ -636,9 +800,7 @@ function CustomSlotMembersPage({ slot, onBack }: CustomSlotMembersPageProps) {
                     {member.location}
                   </p>
                 </div>
-                <p className="text-sm font-semibold text-primary flex-shrink-0">
-                  {member.phone}
-                </p>
+                <p className="text-xs text-muted-foreground">{member.phone}</p>
               </div>
               {member.requirements && (
                 <p className="text-sm text-muted-foreground leading-relaxed">
@@ -699,17 +861,29 @@ function SlotCardWrapper({
 export interface CustomSlotsSectionProps {
   isAuthenticated: boolean;
   onAuthRequired?: () => void;
+  externalCreateOpen?: boolean;
+  onExternalCreateClose?: () => void;
 }
 
 export function CustomSlotsSection({
   isAuthenticated,
   onAuthRequired = () => {},
+  externalCreateOpen = false,
+  onExternalCreateClose,
 }: CustomSlotsSectionProps) {
   const { data: slots = [], isLoading } = useCustomSlots();
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [joiningSlot, setJoiningSlot] = useState<CustomSlot | null>(null);
   const [viewingSlot, setViewingSlot] = useState<CustomSlot | null>(null);
+  const prevExternalRef = useRef(false);
+
+  useEffect(() => {
+    if (externalCreateOpen && !prevExternalRef.current) {
+      setShowCreateModal(true);
+    }
+    prevExternalRef.current = externalCreateOpen;
+  }, [externalCreateOpen]);
 
   const filteredSlots =
     categoryFilter === "All"
@@ -829,7 +1003,12 @@ export function CustomSlotsSection({
       {/* Modals */}
       <AnimatePresence>
         {showCreateModal && (
-          <CreateSlotModal onClose={() => setShowCreateModal(false)} />
+          <CreateSlotModal
+            onClose={() => {
+              setShowCreateModal(false);
+              onExternalCreateClose?.();
+            }}
+          />
         )}
         {joiningSlot && (
           <JoinSlotModal

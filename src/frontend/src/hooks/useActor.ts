@@ -27,22 +27,13 @@ export function useActor() {
 
       const actor = await createActorWithConfig(actorOptions);
       const adminToken = getSecretParameter("caffeineAdminToken") || "";
-      // Wrap initialization in try-catch so actor is always returned even if
-      // _initializeAccessControlWithSecret fails. The backend's ensureRegistered
-      // auto-registers users on their first call anyway.
-      try {
-        await actor._initializeAccessControlWithSecret(adminToken);
-      } catch (err) {
-        console.warn("Actor initialization warning (non-fatal):", err);
-      }
+      await actor._initializeAccessControlWithSecret(adminToken);
       return actor;
     },
     // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
     // This will cause the actor to be recreated when the identity changes
     enabled: true,
-    // Retry once in case of transient network issues
-    retry: 1,
   });
 
   // When the actor changes, invalidate dependent queries

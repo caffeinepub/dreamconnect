@@ -19,6 +19,7 @@ import {
   Briefcase,
   Building2,
   Bus,
+  CalendarDays,
   Car,
   CheckCircle2,
   ChevronDown,
@@ -30,20 +31,28 @@ import {
   Heart,
   Home,
   IndianRupee,
+  Leaf,
   Loader2,
   LogOut,
   MapPin,
   Monitor,
+  Package,
+  PartyPopper,
+  PawPrint,
   Phone,
+  Plane,
+  Printer,
   Search,
   Shield,
   Smartphone,
   Sofa,
   Stethoscope,
   Tractor,
+  Trophy,
   Truck,
   User,
   Users,
+  Wrench,
   X,
   Zap,
 } from "lucide-react";
@@ -133,6 +142,60 @@ const CATEGORIES = [
     color: "oklch(0.60 0.15 250)",
   },
   { id: "Decor", label: "Decor", icon: Home, color: "oklch(0.65 0.15 290)" },
+  {
+    id: "Home Services",
+    label: "Home Services",
+    icon: Wrench,
+    color: "oklch(0.64 0.18 195)",
+  },
+  {
+    id: "Travel",
+    label: "Travel",
+    icon: Plane,
+    color: "oklch(0.65 0.22 220)",
+  },
+  {
+    id: "Agriculture",
+    label: "Agriculture",
+    icon: Leaf,
+    color: "oklch(0.62 0.20 135)",
+  },
+  {
+    id: "Food & Catering",
+    label: "Food & Catering",
+    icon: CalendarDays,
+    color: "oklch(0.70 0.20 50)",
+  },
+  {
+    id: "Events & Entertainment",
+    label: "Events",
+    icon: PartyPopper,
+    color: "oklch(0.65 0.22 300)",
+  },
+  {
+    id: "Sports & Recreation",
+    label: "Sports",
+    icon: Trophy,
+    color: "oklch(0.64 0.22 145)",
+  },
+  {
+    id: "Pets & Animals",
+    label: "Pets",
+    icon: PawPrint,
+    color: "oklch(0.68 0.18 80)",
+  },
+  {
+    id: "Printing & Stationery",
+    label: "Printing",
+    icon: Printer,
+    color: "oklch(0.60 0.15 240)",
+  },
+  {
+    id: "Logistics & Transport",
+    label: "Logistics",
+    icon: Package,
+    color: "oklch(0.62 0.18 25)",
+  },
   {
     id: "Other",
     label: "Other",
@@ -339,18 +402,115 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Photo Frames",
     "Vases",
   ],
-  Other: [
-    "Home Services",
-    "Travel",
-    "Agriculture",
-    "Food & Catering",
-    "Events & Entertainment",
-    "Sports & Recreation",
-    "Pets & Animals",
-    "Printing & Stationery",
-    "Logistics & Transport",
-    "Other / Custom",
+  "Home Services": [
+    "Plumbing",
+    "Electrical Work",
+    "Carpentry",
+    "Painting",
+    "House Cleaning",
+    "AC Repair",
+    "Pest Control",
+    "CCTV Installation",
+    "Home Renovation",
+    "Water Tank Cleaning",
   ],
+  Travel: [
+    "Tour Packages",
+    "Hotel Bookings",
+    "Car Rentals",
+    "Flight Tickets",
+    "Honeymoon Packages",
+    "Pilgrimage Tours",
+    "Adventure Travel",
+    "International Tours",
+    "Weekend Getaways",
+    "Bus Booking",
+  ],
+  Agriculture: [
+    "Seeds & Saplings",
+    "Fertilizers",
+    "Pesticides",
+    "Farm Equipment",
+    "Irrigation Systems",
+    "Drip Systems",
+    "Greenhouse",
+    "Organic Farming",
+    "Soil Testing",
+    "Cold Storage",
+  ],
+  "Food & Catering": [
+    "Wedding Catering",
+    "Corporate Events",
+    "Birthday Parties",
+    "Home Delivery",
+    "Cloud Kitchen",
+    "Food Truck",
+    "Tiffin Service",
+    "Restaurant Setup",
+    "Bakery",
+    "Ice Cream Parlor",
+  ],
+  "Events & Entertainment": [
+    "Wedding Planning",
+    "Birthday Events",
+    "Corporate Events",
+    "DJ & Music",
+    "Photography",
+    "Videography",
+    "Decorations",
+    "Sound & Lighting",
+    "Anchor & Emcee",
+    "Fireworks",
+  ],
+  "Sports & Recreation": [
+    "Cricket Equipment",
+    "Football",
+    "Badminton",
+    "Swimming",
+    "Cycling",
+    "Tennis",
+    "Table Tennis",
+    "Gym Equipment",
+    "Yoga",
+    "Martial Arts",
+  ],
+  "Pets & Animals": [
+    "Dogs",
+    "Cats",
+    "Birds",
+    "Fish & Aquarium",
+    "Veterinary Services",
+    "Pet Food",
+    "Pet Grooming",
+    "Pet Boarding",
+    "Pet Training",
+    "Exotic Pets",
+  ],
+  "Printing & Stationery": [
+    "Business Cards",
+    "Banners & Flex",
+    "Brochures",
+    "Letterheads",
+    "Office Stationery",
+    "Custom T-Shirts",
+    "Wedding Cards",
+    "Packaging",
+    "Labels & Stickers",
+    "Photo Printing",
+  ],
+  "Logistics & Transport": [
+    "Packers & Movers",
+    "Courier Services",
+    "Cargo Transport",
+    "Two-Wheeler Delivery",
+    "Car Transport",
+    "International Shipping",
+    "Warehouse Storage",
+    "Last Mile Delivery",
+    "Refrigerated Transport",
+    "Heavy Machinery Transport",
+  ],
+  Other: [],
 };
 
 const MAX_SLOTS = 20;
@@ -687,13 +847,18 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
       toast.success(`Registered for ${product}!`);
       setTimeout(onClose, 1500);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("Registration error:", msg);
+      const raw = err instanceof Error ? err.message : String(err);
+      console.error("Registration error:", raw);
+      // Extract the meaningful trap message from verbose ICP error strings
+      const trapMatch =
+        raw.match(/ic0\.trap with message:\s*(.+?)(?:\s*\n|$)/i) ||
+        raw.match(/message['\":\s]+([^'"]{5,120})/i);
+      const msg = trapMatch ? trapMatch[1].trim() : raw;
       if (msg.includes("Not connected") || msg.includes("actor")) {
         toast.error("Not signed in. Please refresh and try again.");
       } else {
         toast.error(
-          msg.length < 120 ? msg : "Registration failed. Please try again.",
+          msg.length < 160 ? msg : "Registration failed. Please try again.",
         );
       }
     }
@@ -1041,6 +1206,7 @@ function HomePage({
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
   const [vehicleSubType, setVehicleSubType] = useState("all");
+  const [externalCreateOpen, setExternalCreateOpen] = useState(false);
 
   const SEARCH_EXAMPLES = [
     "Try: AC Bangalore",
@@ -1300,15 +1466,56 @@ function HomePage({
         )}
       </div>
 
-      {/* Other category premium nudge */}
-      {activeCategory === "Other" && (
-        <div className="mb-4 text-sm text-amber-400 font-medium">
-          Upgrade to Premium to join this slot and connect with serious buyers
-        </div>
-      )}
-
       {/* Product Grid */}
-      {isLoading ? (
+      {activeCategory === "Other" ? (
+        <motion.div
+          key="other-section"
+          className="flex flex-col items-center py-12 text-center"
+          initial={{ opacity: 0, y: 16 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+        >
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+            <FlameKindling size={28} className="text-primary" />
+          </div>
+          <h3 className="font-display text-2xl font-bold text-foreground mb-2">
+            Can't find what you are looking for?
+          </h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-xs leading-relaxed">
+            Create a custom slot for your specific requirement and invite others
+            to join.
+          </p>
+          {isAuthenticated ? (
+            <button
+              type="button"
+              data-ocid="other.create_slot_button"
+              onClick={() => setExternalCreateOpen(true)}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95"
+              style={{ background: "oklch(0.62 0.15 280)" }}
+            >
+              Create a Custom Slot
+            </button>
+          ) : (
+            <button
+              type="button"
+              data-ocid="other.create_slot_button"
+              onClick={onAuthRequired}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95"
+              style={{ background: "oklch(0.62 0.15 280)" }}
+            >
+              Sign In to Create a Slot
+            </button>
+          )}
+          <div className="w-full mt-12">
+            <CustomSlotsSection
+              isAuthenticated={isAuthenticated}
+              onAuthRequired={onAuthRequired}
+              externalCreateOpen={externalCreateOpen}
+              onExternalCreateClose={() => setExternalCreateOpen(false)}
+            />
+          </div>
+        </motion.div>
+      ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
             <Skeleton key={i} className="h-52 rounded-2xl" />
@@ -1425,10 +1632,6 @@ function HomePage({
           />
         )}
       </AnimatePresence>
-
-      <div className="mt-12">
-        <CustomSlotsSection isAuthenticated={isAuthenticated} />
-      </div>
     </main>
   );
 }
