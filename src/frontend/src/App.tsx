@@ -14,9 +14,11 @@ import {
 } from "@tanstack/react-query";
 import {
   Armchair,
+  Bike,
   BookOpen,
   Briefcase,
   Building2,
+  Bus,
   Car,
   CheckCircle2,
   ChevronDown,
@@ -38,6 +40,8 @@ import {
   Smartphone,
   Sofa,
   Stethoscope,
+  Tractor,
+  Truck,
   User,
   Users,
   X,
@@ -134,6 +138,36 @@ const CATEGORIES = [
     label: "Other",
     icon: FlameKindling,
     color: "oklch(0.62 0.15 280)",
+  },
+];
+
+// Vehicle subcategory definitions with Lucide icons (Cars and Bikes listed first)
+const VEHICLE_SUBCATEGORIES = [
+  { label: "Cars", prefix: "Car -", icon: Car, color: "oklch(0.72 0.19 55)" },
+  {
+    label: "Bikes & Scooters",
+    prefix: "Bike -",
+    icon: Bike,
+    color: "oklch(0.62 0.22 18)",
+  },
+  {
+    label: "Trucks & Commercial",
+    prefix: "Truck -",
+    icon: Truck,
+    color: "oklch(0.60 0.15 250)",
+  },
+  { label: "Buses", prefix: "Bus -", icon: Bus, color: "oklch(0.62 0.22 28)" },
+  {
+    label: "Heavy Equipment",
+    prefix: "Heavy Equipment -",
+    icon: HardHat,
+    color: "oklch(0.68 0.17 70)",
+  },
+  {
+    label: "Three Wheelers",
+    prefix: "Three Wheeler -",
+    icon: Tractor,
+    color: "oklch(0.65 0.15 290)",
   },
 ];
 
@@ -652,8 +686,16 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
       setSubmitted(true);
       toast.success(`Registered for ${product}!`);
       setTimeout(onClose, 1500);
-    } catch {
-      toast.error("Registration failed. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error("Registration error:", msg);
+      if (msg.includes("Not connected") || msg.includes("actor")) {
+        toast.error("Not signed in. Please refresh and try again.");
+      } else {
+        toast.error(
+          msg.length < 120 ? msg : "Registration failed. Please try again.",
+        );
+      }
     }
   };
 
@@ -998,6 +1040,7 @@ function HomePage({
   const [searchQuery, setSearchQuery] = useState("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
+  const [vehicleSubType, setVehicleSubType] = useState("all");
 
   const SEARCH_EXAMPLES = [
     "Try: AC Bangalore",
@@ -1272,58 +1315,87 @@ function HomePage({
           ))}
         </div>
       ) : activeCategory === "Vehicles" ? (
-        (() => {
-          const VEHICLE_SUBCATEGORIES = [
-            { label: "Cars", prefix: "Car -", icon: "🚗" },
-            { label: "Bikes & Scooters", prefix: "Bike -", icon: "🏍️" },
-            { label: "Trucks & Commercial", prefix: "Truck -", icon: "🚛" },
-            { label: "Buses", prefix: "Bus -", icon: "🚌" },
-            {
-              label: "Heavy Equipment",
-              prefix: "Heavy Equipment -",
-              icon: "🏗️",
-            },
-            { label: "Three Wheelers", prefix: "Three Wheeler -", icon: "🛺" },
-          ];
-          return (
-            <div className="space-y-8">
-              {VEHICLE_SUBCATEGORIES.map((sub) => {
-                const subProducts = searchFiltered.filter((p) =>
-                  p.startsWith(sub.prefix),
-                );
-                if (subProducts.length === 0) return null;
-                return (
-                  <div key={sub.label}>
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-xl">{sub.icon}</span>
-                      <h3 className="text-lg font-bold text-foreground">
-                        {sub.label}
-                      </h3>
-                      <div className="flex-1 h-px bg-border" />
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {subProducts.map((product, i) => (
-                        <ProductCard
-                          key={product}
-                          product={product}
-                          category={activeCategory}
-                          count={counts[product] ?? 0}
-                          index={i + 1}
-                          onRegister={() => setSelectedProduct(product)}
-                          onViewSlot={() =>
-                            setViewSlot({ category: activeCategory, product })
-                          }
-                          isAuthenticated={isAuthenticated}
-                          onAuthRequired={onAuthRequired}
-                        />
-                      ))}
-                    </div>
+        <div className="space-y-6">
+          {/* Vehicle type selector tabs — Cars and Bikes appear first */}
+          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
+            <button
+              type="button"
+              onClick={() => setVehicleSubType("all")}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                vehicleSubType === "all"
+                  ? "bg-foreground text-background"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              All Vehicles
+            </button>
+            {VEHICLE_SUBCATEGORIES.map((sub) => {
+              const Icon = sub.icon;
+              const isActive = vehicleSubType === sub.prefix;
+              return (
+                <button
+                  key={sub.prefix}
+                  type="button"
+                  onClick={() =>
+                    setVehicleSubType(isActive ? "all" : sub.prefix)
+                  }
+                  className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                    isActive
+                      ? "text-white shadow-glow"
+                      : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                  style={isActive ? { background: sub.color } : {}}
+                >
+                  <Icon size={14} />
+                  {sub.label}
+                </button>
+              );
+            })}
+          </div>
+          {/* Brand cards grouped by selected vehicle type */}
+          {VEHICLE_SUBCATEGORIES.filter(
+            (sub) => vehicleSubType === "all" || vehicleSubType === sub.prefix,
+          ).map((sub) => {
+            const Icon = sub.icon;
+            const subProducts = searchFiltered.filter((p) =>
+              p.startsWith(sub.prefix),
+            );
+            if (subProducts.length === 0) return null;
+            return (
+              <div key={sub.label}>
+                <div className="flex items-center gap-3 mb-4">
+                  <div
+                    className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"
+                    style={{ background: `${sub.color}20` }}
+                  >
+                    <Icon size={22} style={{ color: sub.color }} />
                   </div>
-                );
-              })}
-            </div>
-          );
-        })()
+                  <h3 className="text-xl font-bold text-foreground">
+                    {sub.label}
+                  </h3>
+                  <div className="flex-1 h-px bg-border" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+                  {subProducts.map((product, i) => (
+                    <ProductCard
+                      key={product}
+                      product={product}
+                      category={activeCategory}
+                      count={counts[product] ?? 0}
+                      index={i + 1}
+                      onRegister={() => setSelectedProduct(product)}
+                      onViewSlot={() =>
+                        setViewSlot({ category: activeCategory, product })
+                      }
+                      isAuthenticated={isAuthenticated}
+                      onAuthRequired={onAuthRequired}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {searchFiltered.map((product, i) => (
@@ -1744,6 +1816,17 @@ function RoleSelectionModal({
                 <p className="text-xs text-muted-foreground mt-0.5">
                   View customer requirements, submit offers, chat with clients
                 </p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-xs line-through text-muted-foreground/60">
+                    ₹30,000/yr
+                  </span>
+                  <span className="text-sm font-bold text-emerald-500">
+                    ₹1,000/yr
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-500 border border-emerald-500/20">
+                    96% OFF
+                  </span>
+                </div>
               </div>
             </div>
           </button>
@@ -1800,9 +1883,21 @@ function ServiceProviderSetupModal({
             Service Provider Setup
           </h2>
         </div>
-        <p className="text-sm text-muted-foreground mb-5">
+        <p className="text-sm text-muted-foreground mb-4">
           Tell customers about you and your business
         </p>
+        <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 mb-5 text-center">
+          <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            Launch Offer:{" "}
+            <span className="line-through text-muted-foreground">
+              ₹30,000/yr
+            </span>{" "}
+            <span className="font-bold text-emerald-500">₹1,000/yr</span>
+            <span className="ml-1.5 px-1.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/30 text-[10px] font-bold">
+              96% OFF
+            </span>
+          </p>
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="spName" className="text-sm font-medium">

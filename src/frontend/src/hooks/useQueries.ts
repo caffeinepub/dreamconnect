@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Registration, UserProfile } from "../backend";
 import { useActor } from "./useActor";
+import { useInternetIdentity } from "./useInternetIdentity";
 
 export type { Registration, UserProfile };
 
@@ -107,38 +108,49 @@ export function useRegisterForProduct() {
 
 export function useMyRegistrations() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  const principalKey = identity?.getPrincipal().toString() ?? null;
   return useQuery<Registration[]>({
-    queryKey: ["myRegistrations"],
+    // Include principal in key so query refreshes when identity changes
+    queryKey: ["myRegistrations", principalKey],
     queryFn: async () => {
-      if (!actor) return [];
+      if (!actor || !principalKey) return [];
       return actor.getMyRegistrations();
     },
-    enabled: !!actor && !isFetching,
+    // Only run when user is actually authenticated (not anonymous actor)
+    enabled: !!actor && !isFetching && !!principalKey,
+    retry: false,
   });
 }
 
 export function useAllRegistrations() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  const principalKey = identity?.getPrincipal().toString() ?? null;
   return useQuery<Registration[]>({
-    queryKey: ["allRegistrations"],
+    queryKey: ["allRegistrations", principalKey],
     queryFn: async () => {
-      if (!actor) return [];
+      if (!actor || !principalKey) return [];
       return actor.getAllRegistrations();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!principalKey,
+    retry: false,
   });
 }
 
 export function useIsAdmin() {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  const principalKey = identity?.getPrincipal().toString() ?? null;
   return useQuery<boolean>({
-    queryKey: ["isAdmin"],
+    queryKey: ["isAdmin", principalKey],
     queryFn: async () => {
-      if (!actor) return false;
+      if (!actor || !principalKey) return false;
       return actor.isCallerAdmin();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor && !isFetching && !!principalKey,
     staleTime: 60000,
+    retry: false,
   });
 }
 
@@ -212,14 +224,18 @@ export function useRegisterServiceProvider() {
 
 export function useSlotMembers(category: string, product: string) {
   const { actor, isFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  const principalKey = identity?.getPrincipal().toString() ?? null;
   return useQuery<Registration[]>({
-    queryKey: ["slotMembers", category, product],
+    queryKey: ["slotMembers", category, product, principalKey],
     queryFn: async () => {
-      if (!actor) return [];
+      if (!actor || !principalKey) return [];
       return (actor as any).getSlotMembers(category, product);
     },
-    enabled: !!actor && !isFetching && !!category && !!product,
+    enabled:
+      !!actor && !isFetching && !!category && !!product && !!principalKey,
     refetchInterval: 15000,
+    retry: false,
   });
 }
 
