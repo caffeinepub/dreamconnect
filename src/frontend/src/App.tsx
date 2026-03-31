@@ -33,16 +33,18 @@ import {
   MapPin,
   Monitor,
   Phone,
+  Search,
   Shield,
   Smartphone,
   Sofa,
   Stethoscope,
   User,
   Users,
+  X,
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
@@ -127,6 +129,12 @@ const CATEGORIES = [
     color: "oklch(0.60 0.15 250)",
   },
   { id: "Decor", label: "Decor", icon: Home, color: "oklch(0.65 0.15 290)" },
+  {
+    id: "Other",
+    label: "Other",
+    icon: FlameKindling,
+    color: "oklch(0.62 0.15 280)",
+  },
 ];
 
 const FALLBACK_PRODUCTS: Record<string, string[]> = {
@@ -296,6 +304,18 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Clocks",
     "Photo Frames",
     "Vases",
+  ],
+  Other: [
+    "Home Services",
+    "Travel",
+    "Agriculture",
+    "Food & Catering",
+    "Events & Entertainment",
+    "Sports & Recreation",
+    "Pets & Animals",
+    "Printing & Stationery",
+    "Logistics & Transport",
+    "Other / Custom",
   ],
 };
 
@@ -975,6 +995,29 @@ function HomePage({
 
   const [cityFilter, setCityFilter] = useState("");
   const [locationLoading, setLocationLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  const SEARCH_EXAMPLES = [
+    "Try: AC Bangalore",
+    "Try: Royal Enfield bikes",
+    "Try: JCB equipment Hyderabad",
+    "Try: Interior Design Mumbai",
+    "Try: Gym treadmill Chennai",
+    "Try: Medical equipment Pune",
+    "Try: Maruti Suzuki Car",
+    "Try: Real Estate Hyderabad",
+  ];
+
+  useEffect(() => {
+    if (searchFocused || searchQuery) return;
+    const timer = setInterval(() => {
+      setPlaceholderIdx((i) => (i + 1) % SEARCH_EXAMPLES.length);
+    }, 2500);
+    return () => clearInterval(timer);
+  }, [searchFocused, searchQuery]);
+
   const { data: publicRegs = [] } =
     usePublicRegistrationsForCategory(activeCategory);
   const filteredProducts = cityFilter.trim()
@@ -982,10 +1025,28 @@ function HomePage({
         const lower = cityFilter.trim().toLowerCase();
         return publicRegs.some(
           (r: PublicRegistration) =>
-            r.product === product && r.location.toLowerCase().includes(lower),
+            r.product === product && r.location.toLowerCase().trim() === lower,
         );
       })
     : displayProducts;
+
+  const searchFiltered = searchQuery.trim()
+    ? filteredProducts.filter((product) => {
+        const q = searchQuery.trim().toLowerCase();
+        // Check if search matches a category — if so, auto-show that category
+        const matchesCategory = CATEGORIES.some(
+          (c) => c.id.toLowerCase().includes(q) && c.id === activeCategory,
+        );
+        return (
+          matchesCategory ||
+          product.toLowerCase().includes(q) ||
+          publicRegs.some(
+            (r: PublicRegistration) =>
+              r.product === product && r.location.toLowerCase().trim() === q,
+          )
+        );
+      })
+    : filteredProducts;
 
   const detectNearbyCity = () => {
     if (!navigator.geolocation) {
@@ -1052,11 +1113,52 @@ function HomePage({
 
   return (
     <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Amazon-Style Search Bar */}
+      <div className="relative mb-6">
+        <div className="relative flex items-center h-12 rounded-2xl bg-muted/50 border border-border focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/20 transition-all duration-200">
+          <Search
+            size={18}
+            className="absolute left-4 text-muted-foreground pointer-events-none"
+          />
+          <input
+            data-ocid="home.search_input"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              // Auto-switch category if search matches one
+              const q = e.target.value.trim().toLowerCase();
+              if (q) {
+                const matched = CATEGORIES.find((c) =>
+                  c.id.toLowerCase().includes(q),
+                );
+                if (matched) setActiveCategory(matched.id);
+              }
+            }}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+            placeholder={SEARCH_EXAMPLES[placeholderIdx]}
+            className="w-full h-full bg-transparent pl-11 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              data-ocid="home.search_clear"
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 text-muted-foreground hover:text-foreground transition-colors"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Category Tabs */}
       <div className="flex gap-2 pb-6 overflow-x-auto scrollbar-none">
         {CATEGORIES.map((cat, i) => {
           const Icon = cat.icon;
           const isActive = cat.id === activeCategory;
+          const isOther = cat.id === "Other";
           return (
             <button
               key={cat.id}
@@ -1072,6 +1174,11 @@ function HomePage({
             >
               <Icon size={14} />
               {cat.label}
+              {isOther && (
+                <span className="ml-1 px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 leading-none">
+                  PRO
+                </span>
+              )}
             </button>
           );
         })}
@@ -1150,6 +1257,13 @@ function HomePage({
         )}
       </div>
 
+      {/* Other category premium nudge */}
+      {activeCategory === "Other" && (
+        <div className="mb-4 text-sm text-amber-400 font-medium">
+          Upgrade to Premium to join this slot and connect with serious buyers
+        </div>
+      )}
+
       {/* Product Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -1157,9 +1271,62 @@ function HomePage({
             <Skeleton key={i} className="h-52 rounded-2xl" />
           ))}
         </div>
+      ) : activeCategory === "Vehicles" ? (
+        (() => {
+          const VEHICLE_SUBCATEGORIES = [
+            { label: "Cars", prefix: "Car -", icon: "🚗" },
+            { label: "Bikes & Scooters", prefix: "Bike -", icon: "🏍️" },
+            { label: "Trucks & Commercial", prefix: "Truck -", icon: "🚛" },
+            { label: "Buses", prefix: "Bus -", icon: "🚌" },
+            {
+              label: "Heavy Equipment",
+              prefix: "Heavy Equipment -",
+              icon: "🏗️",
+            },
+            { label: "Three Wheelers", prefix: "Three Wheeler -", icon: "🛺" },
+          ];
+          return (
+            <div className="space-y-8">
+              {VEHICLE_SUBCATEGORIES.map((sub) => {
+                const subProducts = searchFiltered.filter((p) =>
+                  p.startsWith(sub.prefix),
+                );
+                if (subProducts.length === 0) return null;
+                return (
+                  <div key={sub.label}>
+                    <div className="flex items-center gap-2 mb-4">
+                      <span className="text-xl">{sub.icon}</span>
+                      <h3 className="text-lg font-bold text-foreground">
+                        {sub.label}
+                      </h3>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {subProducts.map((product, i) => (
+                        <ProductCard
+                          key={product}
+                          product={product}
+                          category={activeCategory}
+                          count={counts[product] ?? 0}
+                          index={i + 1}
+                          onRegister={() => setSelectedProduct(product)}
+                          onViewSlot={() =>
+                            setViewSlot({ category: activeCategory, product })
+                          }
+                          isAuthenticated={isAuthenticated}
+                          onAuthRequired={onAuthRequired}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredProducts.map((product, i) => (
+          {searchFiltered.map((product, i) => (
             <ProductCard
               key={product}
               product={product}
