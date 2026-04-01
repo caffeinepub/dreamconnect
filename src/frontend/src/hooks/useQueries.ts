@@ -69,9 +69,9 @@ export function useProductCounts(category: string, products: string[]) {
 }
 
 export function useRegisterForProduct() {
-  const { actor } = useActor();
+  const { actor, isFetching: actorFetching } = useActor();
   const queryClient = useQueryClient();
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async ({
       category,
       product,
@@ -104,6 +104,7 @@ export function useRegisterForProduct() {
       queryClient.invalidateQueries({ queryKey: ["myRegistrations"] });
     },
   });
+  return { ...mutation, isActorReady: !!actor && !actorFetching };
 }
 
 export function useMyRegistrations() {

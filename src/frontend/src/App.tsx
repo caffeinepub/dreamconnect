@@ -873,7 +873,7 @@ function RegistrationModal({
         raw.match(/message['\":\s]+([^'"]{5,120})/i);
       const msg = trapMatch ? trapMatch[1].trim() : raw;
       if (msg.includes("Not connected") || msg.includes("actor")) {
-        toast.error("Not signed in. Please refresh and try again.");
+        toast.error("Still connecting, please wait a moment and try again.");
       } else {
         toast.error(
           msg.length < 160 ? msg : "Registration failed. Please try again.",
@@ -1063,15 +1063,17 @@ function RegistrationModal({
               <Button
                 type="submit"
                 data-ocid="register.submit_button"
-                disabled={register.isPending}
+                disabled={register.isPending || !register.isActorReady}
                 className="w-full bg-primary text-primary-foreground font-bold text-base py-5 rounded-xl mt-1"
               >
-                {register.isPending ? (
+                {register.isPending || !register.isActorReady ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : null}
-                {register.isPending
-                  ? "Registering..."
-                  : "Register (Free - Testing)"}
+                {!register.isActorReady
+                  ? "Connecting..."
+                  : register.isPending
+                    ? "Registering..."
+                    : "Register (Free - Testing)"}
               </Button>
             </form>
           )}
