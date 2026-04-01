@@ -1,4 +1,8 @@
 import { CustomSlotsSection } from "@/components/CustomSlots";
+import {
+  LocationSelector,
+  type SelectedLocation,
+} from "@/components/LocationSelector";
 import { ProviderHomeScreen } from "@/components/ProviderView";
 import { SlotDetailPage } from "@/components/SlotDetailPage";
 import { Button } from "@/components/ui/button";
@@ -76,6 +80,12 @@ import {
   useRegisterServiceProvider,
   useSaveCallerUserProfile,
 } from "./hooks/useQueries";
+import {
+  LOCATION_LEVELS,
+  STATE_CAPITALS,
+  formatLocation,
+  matchesLocation,
+} from "./utils/locationData";
 
 const queryClient = new QueryClient();
 
@@ -819,12 +829,20 @@ interface RegModalProps {
   product: string;
   category: string;
   onClose: () => void;
+  prefilledLocation?: string;
+  onEditLocation?: () => void;
 }
 
-function RegistrationModal({ product, category, onClose }: RegModalProps) {
+function RegistrationModal({
+  product,
+  category,
+  onClose,
+  prefilledLocation,
+  onEditLocation,
+}: RegModalProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState(prefilledLocation ?? "");
   const [requirements, setRequirements] = useState("");
   const [requirementDate, setRequirementDate] = useState("");
   const [submitted, setSubmitted] = useState(false);
@@ -975,14 +993,35 @@ function RegistrationModal({ product, category, onClose }: RegModalProps) {
                 <Label htmlFor="reg-location" className="text-sm font-medium">
                   Location
                 </Label>
-                <Input
-                  id="reg-location"
-                  data-ocid="register.location_input"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  placeholder="City / Area"
-                  className="bg-muted border-border focus:border-primary"
-                />
+                {prefilledLocation ? (
+                  <div className="flex items-center justify-between h-10 px-3 rounded-xl bg-muted/60 border border-border text-sm text-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <MapPin
+                        size={13}
+                        className="text-primary flex-shrink-0"
+                      />
+                      {prefilledLocation}
+                    </span>
+                    {onEditLocation && (
+                      <button
+                        type="button"
+                        onClick={onEditLocation}
+                        className="text-xs text-primary hover:underline ml-2 flex-shrink-0"
+                      >
+                        Edit
+                      </button>
+                    )}
+                  </div>
+                ) : (
+                  <Input
+                    id="reg-location"
+                    data-ocid="register.location_input"
+                    value={location}
+                    onChange={(e) => setLocation(e.target.value)}
+                    placeholder="City / Area"
+                    className="bg-muted border-border focus:border-primary"
+                  />
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="reg-date" className="text-sm font-medium">
@@ -1200,8 +1239,10 @@ function HomePage({
 
   const isLoading = productsLoading || countsLoading;
 
-  const [cityFilter, setCityFilter] = useState("");
-  const [locationLoading, setLocationLoading] = useState(false);
+  const [selectedLocation, setSelectedLocation] =
+    useState<SelectedLocation | null>(null);
+  const [locationConfirmed, setLocationConfirmed] = useState(false);
+  const [locationSelectorOpen, setLocationSelectorOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
   const [searchFocused, setSearchFocused] = useState(false);
@@ -1227,20 +1268,92 @@ function HomePage({
     return () => clearInterval(timer);
   }, [searchFocused, searchQuery]);
 
+  // Auto-detect location or default to state capital; never block UI
+  useEffect(() => {
+    if (activeCategory === "Other") {
+      setLocationConfirmed(true);
+      setSelectedLocation(null);
+      return;
+    }
+    // Try saved location first
+    const saved = sessionStorage.getItem(`letzclub_loc_${activeCategory}`);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSelectedLocation(parsed);
+        setLocationConfirmed(true);
+        return;
+      } catch {
+        // fall through to default
+      }
+    }
+    // Immediately apply a default so products show right away
+    const defaultLoc: SelectedLocation = {
+      state: "Telangana",
+      district: "Hyderabad",
+      city: "Hyderabad",
+      area: "",
+    };
+    setSelectedLocation(defaultLoc);
+    setLocationConfirmed(true);
+    // Silently try GPS in background to refine to actual location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const { latitude, longitude } = pos.coords;
+            const resp = await fetch(
+              `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
+            );
+            if (!resp.ok) return;
+            const data = await resp.json();
+            const address = data.address || {};
+            const detectedState = address.state || address.state_district || "";
+            const capital = STATE_CAPITALS[detectedState];
+            if (capital) {
+              const loc: SelectedLocation = {
+                state: detectedState,
+                district: capital.district,
+                city: capital.city,
+                area: "",
+              };
+              setSelectedLocation(loc);
+              sessionStorage.setItem(
+                `letzclub_loc_${activeCategory}`,
+                JSON.stringify(loc),
+              );
+            }
+          } catch {
+            // keep default
+          }
+        },
+        () => {
+          // GPS denied or error — keep default
+        },
+        { timeout: 8000 },
+      );
+    }
+  }, [activeCategory]);
+
   const { data: publicRegs = [] } =
     usePublicRegistrationsForCategory(activeCategory);
-  const filteredProducts = cityFilter.trim()
-    ? displayProducts.filter((product) => {
-        const lower = cityFilter.trim().toLowerCase();
-        return publicRegs.some(
-          (r: PublicRegistration) =>
-            r.product === product && r.location.toLowerCase().trim() === lower,
-        );
-      })
-    : displayProducts;
+
+  // Location-based filtering
+  const locationLevel = LOCATION_LEVELS[activeCategory] ?? "city";
+  const locationFilteredProducts =
+    locationConfirmed && selectedLocation && locationLevel !== "national"
+      ? displayProducts.filter(
+          (product) =>
+            publicRegs.some(
+              (r: PublicRegistration) =>
+                r.product === product &&
+                matchesLocation(r.location, selectedLocation, locationLevel),
+            ) || (counts[product] ?? 0) === 0, // show empty slots too as "Be the first"
+        )
+      : displayProducts;
 
   const searchFiltered = searchQuery.trim()
-    ? filteredProducts.filter((product) => {
+    ? locationFilteredProducts.filter((product) => {
         const q = searchQuery.trim().toLowerCase();
         // Check if search matches a category — if so, auto-show that category
         const matchesCategory = CATEGORIES.some(
@@ -1251,57 +1364,33 @@ function HomePage({
           product.toLowerCase().includes(q) ||
           publicRegs.some(
             (r: PublicRegistration) =>
-              r.product === product && r.location.toLowerCase().trim() === q,
+              r.product === product && r.location.toLowerCase().includes(q),
           )
         );
       })
-    : filteredProducts;
+    : locationFilteredProducts;
 
-  const detectNearbyCity = () => {
-    if (!navigator.geolocation) {
-      toast.error("Location not supported on this browser");
-      return;
+  // Helper: find the actual product slot to register for (auto-creates Slot 2 if full)
+  const resolveSlotProduct = (baseProduct: string): string => {
+    if ((counts[baseProduct] ?? 0) < MAX_SLOTS) return baseProduct;
+    for (let i = 2; i <= 10; i++) {
+      const candidate = `${baseProduct} (Slot ${i})`;
+      if ((counts[candidate] ?? 0) < MAX_SLOTS) return candidate;
     }
-    setLocationLoading(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const { latitude, longitude } = pos.coords;
-          const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?lat=${latitude}&lon=${longitude}&format=json`,
-            { headers: { "Accept-Language": "en" } },
-          );
-          const data = await res.json();
-          const city =
-            data.address?.city ||
-            data.address?.town ||
-            data.address?.village ||
-            data.address?.county ||
-            "";
-          if (city) {
-            setCityFilter(city);
-          } else {
-            toast.error("Could not detect city from your location");
-          }
-        } catch {
-          toast.error("Failed to detect location");
-        } finally {
-          setLocationLoading(false);
-        }
-      },
-      (err) => {
-        setLocationLoading(false);
-        if (err.code === err.PERMISSION_DENIED) {
-          toast.error(
-            "Location permission denied. Please enable location in browser settings.",
-          );
-        } else {
-          toast.error("Could not get your location");
-        }
-      },
-      { timeout: 8000 },
-    );
+    return baseProduct; // all full, fall through
   };
+
+  // Build prefilled location string for registration modal
+  const prefilledLocationStr =
+    selectedLocation && locationConfirmed
+      ? formatLocation(
+          selectedLocation.city ||
+            selectedLocation.district ||
+            selectedLocation.state,
+          selectedLocation.district,
+          selectedLocation.state,
+        )
+      : undefined;
 
   if (viewSlot) {
     const cat = CATEGORIES.find((c) => c.id === viewSlot.category);
@@ -1425,46 +1514,28 @@ function HomePage({
         })()}
       </motion.div>
 
-      {/* City Filter */}
-      <div className="flex items-center gap-2 mb-4">
-        <div className="relative flex-1 max-w-xs">
-          <MapPin
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
-          />
-          <Input
-            data-ocid="home.city_filter_input"
-            placeholder="Filter by city (e.g. Mumbai)"
-            value={cityFilter}
-            onChange={(e) => setCityFilter(e.target.value)}
-            className="pl-8 h-9 text-sm bg-muted/50 border-border"
-          />
-        </div>
-        <button
-          type="button"
-          data-ocid="home.near_me_button"
-          onClick={detectNearbyCity}
-          disabled={locationLoading}
-          className="flex items-center gap-1 px-3 h-9 text-xs font-medium rounded-lg border border-border bg-background text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-        >
-          {locationLoading ? (
-            <Loader2 size={12} className="animate-spin" />
-          ) : (
-            <MapPin size={12} />
-          )}
-          Near Me
-        </button>
-        {cityFilter && (
+      {/* Location confirmed badge */}
+      {locationConfirmed && selectedLocation && activeCategory !== "Other" && (
+        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-sm">
+          <MapPin size={13} className="text-primary flex-shrink-0" />
+          <span className="text-foreground text-xs font-medium">
+            Showing slots in:{" "}
+            <strong className="text-primary">
+              {selectedLocation.city ||
+                selectedLocation.district ||
+                selectedLocation.state}
+            </strong>
+          </span>
           <button
             type="button"
-            data-ocid="home.city_filter_clear"
-            onClick={() => setCityFilter("")}
-            className="text-xs text-muted-foreground hover:text-foreground"
+            data-ocid="home.change_location_button"
+            onClick={() => setLocationSelectorOpen(true)}
+            className="ml-auto text-xs text-muted-foreground hover:text-foreground underline flex-shrink-0"
           >
-            Clear
+            Change
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Product Grid */}
       {activeCategory === "Other" ? (
@@ -1590,7 +1661,9 @@ function HomePage({
                       category={activeCategory}
                       count={counts[product] ?? 0}
                       index={i + 1}
-                      onRegister={() => setSelectedProduct(product)}
+                      onRegister={() =>
+                        setSelectedProduct(resolveSlotProduct(product))
+                      }
                       onViewSlot={() =>
                         setViewSlot({ category: activeCategory, product })
                       }
@@ -1612,7 +1685,7 @@ function HomePage({
               category={activeCategory}
               count={counts[product] ?? 0}
               index={i + 1}
-              onRegister={() => setSelectedProduct(product)}
+              onRegister={() => setSelectedProduct(resolveSlotProduct(product))}
               onViewSlot={() =>
                 setViewSlot({ category: activeCategory, product })
               }
@@ -1629,9 +1702,59 @@ function HomePage({
             product={selectedProduct}
             category={activeCategory}
             onClose={() => setSelectedProduct(null)}
+            prefilledLocation={prefilledLocationStr}
+            onEditLocation={() => {
+              setSelectedProduct(null);
+              setLocationSelectorOpen(true);
+            }}
           />
         )}
       </AnimatePresence>
+
+      {/* Location selector modal */}
+      {locationSelectorOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
+          onClick={() => setLocationSelectorOpen(false)}
+          onKeyDown={(e) =>
+            e.key === "Escape" && setLocationSelectorOpen(false)
+          }
+          role="presentation"
+        >
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" />
+          <div
+            className="relative z-10 w-full sm:max-w-lg mx-4 bg-background rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-y-auto max-h-[90vh] p-4"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-display text-lg font-bold text-foreground">
+                Change Location
+              </h3>
+              <button
+                type="button"
+                onClick={() => setLocationSelectorOpen(false)}
+                className="p-1 rounded-lg text-muted-foreground hover:text-foreground"
+                data-ocid="home.close_button"
+              >
+                ✕
+              </button>
+            </div>
+            <LocationSelector
+              categoryId={activeCategory}
+              onLocationSelected={(loc) => {
+                setSelectedLocation(loc);
+                setLocationConfirmed(true);
+                sessionStorage.setItem(
+                  `letzclub_loc_${activeCategory}`,
+                  JSON.stringify(loc),
+                );
+                setLocationSelectorOpen(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </main>
   );
 }
