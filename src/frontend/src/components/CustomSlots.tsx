@@ -15,8 +15,10 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useCreateCustomSlot,
+  useCustomSlotMemberCount,
   useCustomSlotMembers,
   useCustomSlots,
   useIsCustomSlotMember,
@@ -185,6 +187,72 @@ function CustomSlotCard({
         </span>
       </div>
 
+      {/* Member avatars */}
+      {memberCount > 0 && (
+        <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center">
+            {(
+              [
+                {
+                  key: "av-1",
+                  color: "oklch(0.6 0.18 200)",
+                  show: memberCount >= 1,
+                },
+                {
+                  key: "av-2",
+                  color: "oklch(0.6 0.18 290)",
+                  show: memberCount >= 2,
+                },
+                {
+                  key: "av-3",
+                  color: "oklch(0.7 0.18 60)",
+                  show: memberCount >= 3,
+                },
+                {
+                  key: "av-4",
+                  color: "oklch(0.6 0.18 145)",
+                  show: memberCount >= 4,
+                },
+              ] as { key: string; color: string; show: boolean }[]
+            )
+              .filter((av) => av.show)
+              .map((av, pos) => (
+                <div
+                  key={av.key}
+                  style={{
+                    width: 28,
+                    height: 28,
+                    borderRadius: "50%",
+                    background: av.color,
+                    border: "2px solid oklch(0.18 0.02 258)",
+                    marginLeft: pos === 0 ? 0 : -10,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 4 - pos,
+                    position: "relative",
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="white"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
+                  </svg>
+                </div>
+              ))}
+          </div>
+          {memberCount > 4 && (
+            <span style={{ fontSize: 12, color: "oklch(0.65 0.05 258)" }}>
+              +{memberCount - 4} more
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Progress bar */}
       <div className="mt-1">
         <div
@@ -266,7 +334,9 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
   const [creatorRequirements, setCreatorRequirements] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createSlot = useCreateCustomSlot();
-  const joinSlot = useJoinCustomSlot();
+  const _joinSlot = useJoinCustomSlot();
+  const { identity } = useInternetIdentity();
+  const isActorReady = !!identity;
 
   const isLockedCategory = categoryId !== undefined && categoryId !== "Other";
   const titlePlaceholder =
@@ -286,21 +356,15 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
     }
     setIsSubmitting(true);
     try {
-      const result = await createSlot.mutateAsync({
+      await createSlot.mutateAsync({
         title: title.trim(),
         category,
         description: description.trim(),
         location: location.trim(),
         maxMembers,
-      });
-      // Auto-join creator as first member
-      const slotId = result as bigint;
-      await joinSlot.mutateAsync({
-        slotId,
-        name: creatorName.trim(),
-        phone: creatorPhone.trim(),
-        location: location.trim(),
-        requirements: creatorRequirements.trim(),
+        creatorName: creatorName.trim(),
+        creatorPhone: creatorPhone.trim(),
+        creatorRequirements: creatorRequirements.trim(),
       });
       toast.success(
         "Community slot created! You've been added as the first member.",
@@ -540,7 +604,7 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
             <Button
               type="submit"
               data-ocid="create_slot.submit_button"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !isActorReady}
               className="w-full bg-primary text-primary-foreground font-bold h-12 rounded-xl"
             >
               {isSubmitting ? (
@@ -879,8 +943,7 @@ function SlotCardWrapper({
   const { data: isMember = false } = useIsCustomSlotMember(
     isAuthenticated ? slot.id : null,
   );
-  const { data: members = [] } = useCustomSlotMembers(slot.id);
-  const memberCount = members.length;
+  const { data: memberCount = 0 } = useCustomSlotMemberCount(slot.id);
 
   return (
     <CustomSlotCard

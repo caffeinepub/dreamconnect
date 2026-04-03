@@ -516,13 +516,19 @@ actor {
     description : Text,
     location : Text,
     maxMembers : Nat,
+    creatorName : Text,
+    creatorPhone : Text,
+    creatorRequirements : Text,
   ) : async Nat {
     if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
     if (title.size() == 0) { Runtime.trap("Title cannot be empty") };
     if (location.size() == 0) { Runtime.trap("Location cannot be empty") };
+    if (creatorName.size() == 0) { Runtime.trap("Your name cannot be empty") };
+    if (creatorPhone.size() == 0) { Runtime.trap("Your phone cannot be empty") };
     let cappedMax = if (maxMembers > 50) { 50 } else if (maxMembers < 2) { 2 } else { maxMembers };
+    let slotId = nextCustomSlotId;
     let slot : CustomSlot = {
-      id = nextCustomSlotId;
+      id = slotId;
       title;
       category;
       description;
@@ -532,8 +538,18 @@ actor {
       createdAt = Time.now();
     };
     customSlots.add(slot);
-    let slotId = nextCustomSlotId;
     nextCustomSlotId += 1;
+    // Atomically add creator as first member
+    let member : CustomSlotMember = {
+      slotId;
+      userId = toText(caller);
+      name = creatorName;
+      phone = creatorPhone;
+      location;
+      requirements = creatorRequirements;
+      joinedAt = Time.now();
+    };
+    customSlotMembers.add(member);
     slotId;
   };
 

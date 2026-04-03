@@ -467,6 +467,8 @@ export function useCustomSlots() {
 
 export function useCreateCustomSlot() {
   const { actor } = useActor();
+  const { identity } = useInternetIdentity();
+  const isAuthenticated = !!identity;
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (vars: {
@@ -475,18 +477,28 @@ export function useCreateCustomSlot() {
       description: string;
       location: string;
       maxMembers: number;
+      creatorName: string;
+      creatorPhone: string;
+      creatorRequirements: string;
     }) => {
-      if (!actor) throw new Error("Not connected");
+      if (!identity) throw new Error("Please sign in first");
+      if (!actor || !isAuthenticated)
+        throw new Error("Please wait while we connect your account...");
       return (actor as any).createCustomSlot(
         vars.title,
         vars.category,
         vars.description,
         vars.location,
         BigInt(vars.maxMembers),
+        vars.creatorName,
+        vars.creatorPhone,
+        vars.creatorRequirements,
       );
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customSlots"] });
+      queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
+      queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
     },
   });
 }
@@ -516,6 +528,20 @@ export function useJoinCustomSlot() {
       queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
       queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
     },
+  });
+}
+
+export function useCustomSlotMemberCount(slotId: bigint | null) {
+  const { actor } = useActor();
+  return useQuery<number>({
+    queryKey: ["customSlotMemberCount", slotId?.toString()],
+    queryFn: async () => {
+      if (!actor || slotId === null) return 0;
+      const count = await (actor as any).getCustomSlotMemberCount(slotId);
+      return Number(count);
+    },
+    enabled: !!actor && slotId !== null,
+    refetchInterval: 15000,
   });
 }
 
