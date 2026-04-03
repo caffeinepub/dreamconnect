@@ -5,6 +5,7 @@ import {
 } from "@/components/LocationSelector";
 import { ProviderHomeScreen } from "@/components/ProviderView";
 import { SlotDetailPage } from "@/components/SlotDetailPage";
+import { TimelinePreviewPage } from "@/components/TimelinePreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -52,6 +53,7 @@ import {
   Sofa,
   Stethoscope,
   Tractor,
+  TrendingUp,
   Trophy,
   Truck,
   User,
@@ -128,12 +130,6 @@ const CATEGORIES = [
     color: "oklch(0.65 0.18 160)",
   },
   {
-    id: "Medical",
-    label: "Medical",
-    icon: Stethoscope,
-    color: "oklch(0.60 0.20 10)",
-  },
-  {
     id: "Beauty",
     label: "Beauty",
     icon: Flower2,
@@ -151,28 +147,9 @@ const CATEGORIES = [
     icon: Briefcase,
     color: "oklch(0.60 0.15 250)",
   },
-  { id: "Decor", label: "Decor", icon: Home, color: "oklch(0.65 0.15 290)" },
   {
-    id: "Home Services",
-    label: "Home Services",
-    icon: Wrench,
-    color: "oklch(0.64 0.18 195)",
-  },
-  {
-    id: "Travel",
-    label: "Travel",
-    icon: Plane,
-    color: "oklch(0.65 0.22 220)",
-  },
-  {
-    id: "Agriculture",
-    label: "Agriculture",
-    icon: Leaf,
-    color: "oklch(0.62 0.20 135)",
-  },
-  {
-    id: "Food & Catering",
-    label: "Food & Catering",
+    id: "Food",
+    label: "Food",
     icon: CalendarDays,
     color: "oklch(0.70 0.20 50)",
   },
@@ -201,10 +178,10 @@ const CATEGORIES = [
     color: "oklch(0.60 0.15 240)",
   },
   {
-    id: "Logistics & Transport",
-    label: "Logistics",
-    icon: Package,
-    color: "oklch(0.62 0.18 25)",
+    id: "Marketing",
+    label: "Marketing",
+    icon: TrendingUp,
+    color: "oklch(0.65 0.22 200)",
   },
   {
     id: "Other",
@@ -299,83 +276,18 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Three Wheeler - TVS",
   ],
   "Interior Designing": [
-    "Living Room",
-    "Bedroom",
-    "Kitchen",
-    "Bathroom",
+    "Home",
+    "Restaurant/Cafe",
     "Office",
-    "Kids Room",
-    "Balcony",
-    "Dining Room",
+    "Showroom",
+    "Salon/Spa/Beauty Parlour",
+    "Gym/Fitness Studio",
   ],
-  Furniture: [
-    "Sofa",
-    "Bed",
-    "Wardrobe",
-    "Dining Table",
-    "Office Chair",
-    "Bookshelf",
-    "TV Unit",
-    "Shoe Rack",
-  ],
-  "Real Estate": [
-    "Apartment",
-    "Villa",
-    "Plot",
-    "Commercial Space",
-    "Studio",
-    "Penthouse",
-    "Farmhouse",
-    "Warehouse",
-  ],
-  Gym: [
-    "Treadmill",
-    "Dumbbells",
-    "Bench Press",
-    "Elliptical",
-    "Rowing Machine",
-    "Pull-up Bar",
-    "Resistance Bands",
-    "Yoga Mat",
-    "Exercise Bike",
-    "Kettlebells",
-  ],
-  Courses: [
-    "Programming",
-    "Design",
-    "Digital Marketing",
-    "Finance",
-    "Language",
-    "Photography",
-    "Music",
-    "Cooking",
-    "Fitness",
-    "Business",
-  ],
-  Medical: [
-    "General Physician",
-    "Dentist",
-    "Physiotherapy",
-    "Eye Care",
-    "Skin Care",
-    "Diagnostics",
-    "Nursing Care",
-    "Mental Health",
-    "Nutrition",
-    "Paediatrics",
-  ],
-  Beauty: [
-    "Hair Care",
-    "Skin Care",
-    "Makeup",
-    "Nail Care",
-    "Spa",
-    "Waxing",
-    "Bridal Package",
-    "Massage",
-    "Facial",
-    "Eyebrow Threading",
-  ],
+  Furniture: ["Home Furniture", "Office Furniture", "Restaurant Furniture"],
+  "Real Estate": [],
+  Gym: [],
+  Courses: [],
+  Beauty: ["Makeup", "Beauty Products"],
   "Construction Materials": [
     "Cement",
     "Steel",
@@ -387,115 +299,26 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Plywood",
     "Pipes",
     "Electrical Fittings",
+    "Ceiling",
   ],
   "Business Services": [
     "Accounting",
-    "Legal",
     "HR",
-    "IT Support",
-    "Marketing",
-    "Logistics",
+    "App/Web Development",
     "Printing",
     "Security",
     "Cleaning",
     "Consulting",
   ],
-  Decor: [
-    "Curtains",
-    "Rugs",
-    "Lighting",
-    "Wall Art",
-    "Planters",
-    "Cushions",
-    "Mirrors",
-    "Clocks",
-    "Photo Frames",
-    "Vases",
-  ],
-  "Home Services": [
-    "Plumbing",
-    "Electrical Work",
-    "Carpentry",
-    "Painting",
-    "House Cleaning",
-    "AC Repair",
-    "Pest Control",
-    "CCTV Installation",
-    "Home Renovation",
-    "Water Tank Cleaning",
-  ],
-  Travel: [
-    "Tour Packages",
-    "Hotel Bookings",
-    "Car Rentals",
-    "Flight Tickets",
-    "Honeymoon Packages",
-    "Pilgrimage Tours",
-    "Adventure Travel",
-    "International Tours",
-    "Weekend Getaways",
-    "Bus Booking",
-  ],
-  Agriculture: [
-    "Seeds & Saplings",
-    "Fertilizers",
-    "Pesticides",
-    "Farm Equipment",
-    "Irrigation Systems",
-    "Drip Systems",
-    "Greenhouse",
-    "Organic Farming",
-    "Soil Testing",
-    "Cold Storage",
-  ],
-  "Food & Catering": [
-    "Wedding Catering",
-    "Corporate Events",
-    "Birthday Parties",
-    "Home Delivery",
-    "Cloud Kitchen",
-    "Food Truck",
-    "Tiffin Service",
-    "Restaurant Setup",
-    "Bakery",
-    "Ice Cream Parlor",
-  ],
+  Food: ["Cake", "Home Made Foods"],
   "Events & Entertainment": [
-    "Wedding Planning",
-    "Birthday Events",
-    "Corporate Events",
     "DJ & Music",
-    "Photography",
-    "Videography",
+    "Photography & Videography",
     "Decorations",
-    "Sound & Lighting",
     "Anchor & Emcee",
-    "Fireworks",
   ],
-  "Sports & Recreation": [
-    "Cricket Equipment",
-    "Football",
-    "Badminton",
-    "Swimming",
-    "Cycling",
-    "Tennis",
-    "Table Tennis",
-    "Gym Equipment",
-    "Yoga",
-    "Martial Arts",
-  ],
-  "Pets & Animals": [
-    "Dogs",
-    "Cats",
-    "Birds",
-    "Fish & Aquarium",
-    "Veterinary Services",
-    "Pet Food",
-    "Pet Grooming",
-    "Pet Boarding",
-    "Pet Training",
-    "Exotic Pets",
-  ],
+  "Sports & Recreation": [],
+  "Pets & Animals": ["Dogs", "Birds", "Fish & Aquarium"],
   "Printing & Stationery": [
     "Business Cards",
     "Banners & Flex",
@@ -508,22 +331,30 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Labels & Stickers",
     "Photo Printing",
   ],
-  "Logistics & Transport": [
-    "Packers & Movers",
-    "Courier Services",
-    "Cargo Transport",
-    "Two-Wheeler Delivery",
-    "Car Transport",
-    "International Shipping",
-    "Warehouse Storage",
-    "Last Mile Delivery",
-    "Refrigerated Transport",
-    "Heavy Machinery Transport",
+  Marketing: [
+    "Fashion Influencers",
+    "Beauty Influencers",
+    "Food Influencers",
+    "Fitness Influencers",
+    "Travel Influencers",
+    "Tech Influencers",
+    "Lifestyle Influencers",
+    "Parenting Influencers",
+    "Finance Influencers",
+    "Education Influencers",
   ],
   Other: [],
 };
 
 const MAX_SLOTS = 20;
+
+const CUSTOM_SLOT_ONLY_CATEGORIES = [
+  "Real Estate",
+  "Gym",
+  "Courses",
+  "Sports & Recreation",
+  "Other",
+];
 
 function getBarColor(count: number): string {
   if (count >= MAX_SLOTS) return "oklch(0.55 0.22 28)";
@@ -532,7 +363,7 @@ function getBarColor(count: number): string {
   return "oklch(0.62 0.18 145)";
 }
 
-type Page = "home" | "my-registrations" | "admin";
+type Page = "home" | "my-registrations" | "admin" | "timeline-preview";
 
 // ===== WELCOME / AUTH SCREEN =====
 function WelcomeScreen({
@@ -805,10 +636,10 @@ function getRequirementsPlaceholder(category: string, product: string): string {
       return `e.g. Need a ${product} by next month, budget ₹20,000, prefer commercial grade`;
     case "Courses":
       return `e.g. Looking to join a ${product} course before March end, budget ₹5,000, prefer weekend batches`;
-    case "Medical":
-      return `e.g. Need a ${product} consultation this week, near my location, prefer home visit`;
     case "Beauty":
-      return "e.g. Looking for bridal makeup package for April 15th wedding, budget ₹15,000";
+      return "e.g. Looking for bridal makeup on April 15th, budget ₹15,000";
+    case "Food":
+      return "e.g. Need 50 pieces of chocolate cake for birthday party on April 15th, budget ₹3,000";
     case "Interior Designing":
       return "e.g. Need complete living room design for 1500 sqft flat, budget ₹2 lakhs, by May";
     case "Furniture":
@@ -817,8 +648,6 @@ function getRequirementsPlaceholder(category: string, product: string): string {
       return `e.g. Need ${product} for foundation work by next week, quantity 500 units`;
     case "Business Services":
       return `e.g. Need ${product} services by March 31st, budget ₹5,000 per month`;
-    case "Decor":
-      return "e.g. Looking for living room decor items, budget ₹10,000, prefer earthy tones";
     default:
       return "Describe what you're looking for, your budget, and expected timeline...";
   }
@@ -1083,6 +912,171 @@ function RegistrationModal({
   );
 }
 
+// ===== CUSTOM SLOT ONLY VIEW =====
+interface CustomSlotOnlyViewProps {
+  activeCategory: string;
+  isAuthenticated: boolean;
+  onAuthRequired: () => void;
+  externalCreateOpen: boolean;
+  setExternalCreateOpen: (open: boolean) => void;
+}
+
+function CustomSlotOnlyView({
+  activeCategory,
+  isAuthenticated,
+  onAuthRequired,
+  externalCreateOpen,
+  setExternalCreateOpen,
+}: CustomSlotOnlyViewProps) {
+  const catInfo = CATEGORIES.find((c) => c.id === activeCategory);
+  const CatIcon = catInfo?.icon ?? FlameKindling;
+  const catColor = catInfo?.color ?? "oklch(0.62 0.15 280)";
+
+  const getContent = () => {
+    switch (activeCategory) {
+      case "Real Estate":
+        return {
+          heading: "Create a custom slot for Real Estate",
+          subheading:
+            "Post your requirement and let serious buyers connect with you.",
+          examples: [
+            {
+              title: "Looking for 2BHK flat in your location",
+              detail: "Type: 1BHK, 2BHK  •  Price range: ₹XX Lakhs",
+            },
+            {
+              title: "Looking for Duplex in your location",
+              detail: "Price range: ₹XX Lakhs",
+            },
+            {
+              title: "Looking for G+1 in your location",
+              detail: "Price range: ₹XX Lakhs",
+            },
+          ],
+        };
+      case "Gym":
+        return {
+          heading: "Create a custom slot for Gym",
+          subheading: "Connect with gyms near you or find workout partners.",
+          examples: [
+            {
+              title: "Planning to join a gym in your location",
+              detail: "Looking for affordable membership options",
+            },
+          ],
+        };
+      case "Courses":
+        return {
+          heading: "Create a custom slot for Courses",
+          subheading:
+            "Find others joining the same course and get group deals.",
+          examples: [
+            {
+              title: "Planning to join Java Full Stack course",
+              detail: "Looking for weekend/weekday batches",
+            },
+          ],
+        };
+      case "Sports & Recreation":
+        return {
+          heading: "Create a custom slot for Sports",
+          subheading: "Find sport partners and coaches near you.",
+          examples: [
+            {
+              title: "Looking for cricket partners in your location",
+              detail: "Weekend matches preferred",
+            },
+          ],
+        };
+      default:
+        return {
+          heading: "Can't find what you are looking for?",
+          subheading:
+            "Create a custom slot for your specific requirement and invite others to join.",
+          examples: [],
+        };
+    }
+  };
+
+  const { heading, subheading, examples } = getContent();
+
+  return (
+    <motion.div
+      key={`custom-slot-${activeCategory}`}
+      className="flex flex-col items-center py-12 text-center"
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+    >
+      <div
+        className="w-16 h-16 rounded-2xl flex items-center justify-center mb-4"
+        style={{ background: `${catColor}20` }}
+      >
+        <CatIcon size={28} style={{ color: catColor }} />
+      </div>
+      <h3 className="font-display text-2xl font-bold text-foreground mb-2">
+        {heading}
+      </h3>
+      <p className="text-sm text-muted-foreground mb-6 max-w-xs leading-relaxed">
+        {subheading}
+      </p>
+
+      {examples.length > 0 && (
+        <div className="w-full max-w-lg mb-8 space-y-3 text-left">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+            Example Slots
+          </p>
+          {examples.map((ex, i) => (
+            <div
+              key={ex.title}
+              className="relative rounded-xl border border-border bg-card p-4 shadow-sm"
+              data-ocid={`custom_slot_only.example.${i + 1}`}
+            >
+              <span className="absolute top-2 right-2 text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                Example
+              </span>
+              <p className="font-semibold text-foreground text-sm pr-16">
+                {ex.title}
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">{ex.detail}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {isAuthenticated ? (
+        <button
+          type="button"
+          data-ocid="custom_slot_only.create_slot_button"
+          onClick={() => setExternalCreateOpen(true)}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95"
+          style={{ background: catColor }}
+        >
+          Create a Custom Slot
+        </button>
+      ) : (
+        <button
+          type="button"
+          data-ocid="custom_slot_only.create_slot_button"
+          onClick={onAuthRequired}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95"
+          style={{ background: catColor }}
+        >
+          Sign In to Create a Slot
+        </button>
+      )}
+      <div className="w-full mt-12">
+        <CustomSlotsSection
+          isAuthenticated={isAuthenticated}
+          onAuthRequired={onAuthRequired}
+          externalCreateOpen={externalCreateOpen}
+          onExternalCreateClose={() => setExternalCreateOpen(false)}
+        />
+      </div>
+    </motion.div>
+  );
+}
+
 // ===== PRODUCT CARD =====
 interface ProductCardProps {
   product: string;
@@ -1256,10 +1250,10 @@ function HomePage({
     "Try: Royal Enfield bikes",
     "Try: JCB equipment Hyderabad",
     "Try: Interior Design Mumbai",
-    "Try: Gym treadmill Chennai",
-    "Try: Medical equipment Pune",
+    "Try: Cake Chennai",
+    "Try: Fashion Influencers",
     "Try: Maruti Suzuki Car",
-    "Try: Real Estate Hyderabad",
+    "Try: Beauty Products Hyderabad",
   ];
 
   useEffect(() => {
@@ -1272,7 +1266,7 @@ function HomePage({
 
   // Auto-detect location or default to state capital; never block UI
   useEffect(() => {
-    if (activeCategory === "Other") {
+    if (CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory)) {
       setLocationConfirmed(true);
       setSelectedLocation(null);
       return;
@@ -1517,77 +1511,39 @@ function HomePage({
       </motion.div>
 
       {/* Location confirmed badge */}
-      {locationConfirmed && selectedLocation && activeCategory !== "Other" && (
-        <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-sm">
-          <MapPin size={13} className="text-primary flex-shrink-0" />
-          <span className="text-foreground text-xs font-medium">
-            Showing slots in:{" "}
-            <strong className="text-primary">
-              {selectedLocation.city ||
-                selectedLocation.district ||
-                selectedLocation.state}
-            </strong>
-          </span>
-          <button
-            type="button"
-            data-ocid="home.change_location_button"
-            onClick={() => setLocationSelectorOpen(true)}
-            className="ml-auto text-xs text-muted-foreground hover:text-foreground underline flex-shrink-0"
-          >
-            Change
-          </button>
-        </div>
-      )}
+      {locationConfirmed &&
+        selectedLocation &&
+        !CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory) && (
+          <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-primary/10 border border-primary/20 text-sm">
+            <MapPin size={13} className="text-primary flex-shrink-0" />
+            <span className="text-foreground text-xs font-medium">
+              Showing slots in:{" "}
+              <strong className="text-primary">
+                {selectedLocation.city ||
+                  selectedLocation.district ||
+                  selectedLocation.state}
+              </strong>
+            </span>
+            <button
+              type="button"
+              data-ocid="home.change_location_button"
+              onClick={() => setLocationSelectorOpen(true)}
+              className="ml-auto text-xs text-muted-foreground hover:text-foreground underline flex-shrink-0"
+            >
+              Change
+            </button>
+          </div>
+        )}
 
       {/* Product Grid */}
-      {activeCategory === "Other" ? (
-        <motion.div
-          key="other-section"
-          className="flex flex-col items-center py-12 text-center"
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-        >
-          <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
-            <FlameKindling size={28} className="text-primary" />
-          </div>
-          <h3 className="font-display text-2xl font-bold text-foreground mb-2">
-            Can't find what you are looking for?
-          </h3>
-          <p className="text-sm text-muted-foreground mb-6 max-w-xs leading-relaxed">
-            Create a custom slot for your specific requirement and invite others
-            to join.
-          </p>
-          {isAuthenticated ? (
-            <button
-              type="button"
-              data-ocid="other.create_slot_button"
-              onClick={() => setExternalCreateOpen(true)}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95"
-              style={{ background: "oklch(0.62 0.15 280)" }}
-            >
-              Create a Custom Slot
-            </button>
-          ) : (
-            <button
-              type="button"
-              data-ocid="other.create_slot_button"
-              onClick={onAuthRequired}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95"
-              style={{ background: "oklch(0.62 0.15 280)" }}
-            >
-              Sign In to Create a Slot
-            </button>
-          )}
-          <div className="w-full mt-12">
-            <CustomSlotsSection
-              isAuthenticated={isAuthenticated}
-              onAuthRequired={onAuthRequired}
-              externalCreateOpen={externalCreateOpen}
-              onExternalCreateClose={() => setExternalCreateOpen(false)}
-            />
-          </div>
-        </motion.div>
+      {CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory) ? (
+        <CustomSlotOnlyView
+          activeCategory={activeCategory}
+          isAuthenticated={isAuthenticated}
+          onAuthRequired={onAuthRequired}
+          externalCreateOpen={externalCreateOpen}
+          setExternalCreateOpen={setExternalCreateOpen}
+        />
       ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
@@ -2273,11 +2229,15 @@ function ServiceProviderSetupModal({
                 "Real Estate",
                 "Gym",
                 "Courses",
-                "Medical",
                 "Beauty",
                 "Construction Materials",
                 "Business Services",
-                "Decor",
+                "Food",
+                "Events & Entertainment",
+                "Sports & Recreation",
+                "Pets & Animals",
+                "Printing & Stationery",
+                "Marketing",
               ].map((c) => (
                 <option key={c} value={c}>
                   {c}
@@ -2540,9 +2500,20 @@ function LetzclubApp() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={() => setPage("timeline-preview")}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    page === "timeline-preview"
+                      ? "bg-amber-500/20 text-amber-400"
+                      : "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
+                  }`}
+                >
+                  🔍 Preview Options
+                </button>
+                <button
+                  type="button"
                   data-ocid="nav.my_registrations_link"
                   onClick={() => setPage("my-registrations")}
-                  className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                     page === "my-registrations"
                       ? "bg-primary/20 text-primary"
                       : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -2556,7 +2527,7 @@ function LetzclubApp() {
                     type="button"
                     data-ocid="nav.admin_link"
                     onClick={() => setPage("admin")}
-                    className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                       page === "admin"
                         ? "bg-primary/20 text-primary"
                         : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
@@ -2645,6 +2616,9 @@ function LetzclubApp() {
               >
                 <MyRegistrationsPage />
               </motion.div>
+            )}
+            {page === "timeline-preview" && (
+              <TimelinePreviewPage onBack={() => setPage("home")} />
             )}
             {page === "admin" && isAdmin && (
               <motion.div
