@@ -179,7 +179,7 @@ export interface backendInterface {
     sendChatMessage(category: string, product: string, serviceProviderId: string, content: string, senderIsProvider: boolean): Promise<void>;
     sendChatMessageAsProvider(category: string, product: string, memberId: string, content: string): Promise<void>;
     submitQuote(category: string, product: string, title: string, description: string, price: string): Promise<void>;
-    createCustomSlot(title: string, category: string, description: string, location: string, maxMembers: bigint): Promise<bigint>;
+    createCustomSlot(title: string, category: string, description: string, location: string, maxMembers: bigint, creatorName: string, creatorPhone: string, creatorRequirements: string): Promise<bigint>;
     getCustomSlots(): Promise<Array<CustomSlot>>;
     getCustomSlotsForCategory(category: string): Promise<Array<CustomSlot>>;
     joinCustomSlot(slotId: bigint, name: string, phone: string, location: string, requirements: string): Promise<string>;
@@ -527,17 +527,17 @@ export class Backend implements backendInterface {
             return result;
         }
     }
-    async createCustomSlot(arg0: string, arg1: string, arg2: string, arg3: string, arg4: bigint): Promise<bigint> {
+    async createCustomSlot(arg0: string, arg1: string, arg2: string, arg3: string, arg4: bigint, arg5: string, arg6: string, arg7: string): Promise<bigint> {
         if (this.processError) {
             try {
-                const result = await (this.actor as any).createCustomSlot(arg0, arg1, arg2, arg3, arg4);
+                const result = await (this.actor as any).createCustomSlot(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
                 return result;
             } catch (e) {
                 this.processError(e);
                 throw new Error("unreachable");
             }
         } else {
-            const result = await (this.actor as any).createCustomSlot(arg0, arg1, arg2, arg3, arg4);
+            const result = await (this.actor as any).createCustomSlot(arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7);
             return result;
         }
     }

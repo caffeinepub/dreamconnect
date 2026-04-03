@@ -146,7 +146,7 @@ export const idlService = IDL.Service({
       [],
     ),
   'createCustomSlot' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
       [IDL.Nat],
       [],
     ),
@@ -316,7 +316,7 @@ export const idlFactory = ({ IDL }) => {
         [],
       ),
     'createCustomSlot' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat],
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
         [IDL.Nat],
         [],
       ),

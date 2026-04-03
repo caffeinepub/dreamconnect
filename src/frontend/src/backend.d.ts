@@ -101,7 +101,7 @@ export interface backendInterface {
     sendChatMessage(category: string, product: string, serviceProviderId: string, content: string, senderIsProvider: boolean): Promise<void>;
     sendChatMessageAsProvider(category: string, product: string, memberId: string, content: string): Promise<void>;
     submitQuote(category: string, product: string, title: string, description: string, price: string): Promise<void>;
-    createCustomSlot(title: string, category: string, description: string, location: string, maxMembers: bigint): Promise<bigint>;
+    createCustomSlot(title: string, category: string, description: string, location: string, maxMembers: bigint, creatorName: string, creatorPhone: string, creatorRequirements: string): Promise<bigint>;
     getCustomSlots(): Promise<Array<CustomSlot>>;
     getCustomSlotsForCategory(category: string): Promise<Array<CustomSlot>>;
     joinCustomSlot(slotId: bigint, name: string, phone: string, location: string, requirements: string): Promise<string>;

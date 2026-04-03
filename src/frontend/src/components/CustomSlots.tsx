@@ -3,6 +3,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowLeft,
   Loader2,
@@ -15,6 +16,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useActor } from "../hooks/useActor";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useCreateCustomSlot,
@@ -336,7 +338,10 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
   const createSlot = useCreateCustomSlot();
   const _joinSlot = useJoinCustomSlot();
   const { identity } = useInternetIdentity();
-  const isActorReady = !!identity;
+  const { actor, isFetching: actorFetching } = useActor();
+  const _isAuthenticated = !!identity;
+  const isActorReady = !!actor && !actorFetching;
+  const queryClient = useQueryClient();
 
   const isLockedCategory = categoryId !== undefined && categoryId !== "Other";
   const titlePlaceholder =
@@ -366,6 +371,7 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
         creatorPhone: creatorPhone.trim(),
         creatorRequirements: creatorRequirements.trim(),
       });
+      await queryClient.refetchQueries({ queryKey: ["customSlots"] });
       toast.success(
         "Community slot created! You've been added as the first member.",
       );
@@ -993,8 +999,9 @@ export function CustomSlotsSection({
     prevExternalRef.current = externalCreateOpen;
   }, [externalCreateOpen]);
 
-  const filteredSlots =
-    categoryFilter === "All"
+  const filteredSlots = categoryId
+    ? slots.filter((s) => s.category === categoryId)
+    : categoryFilter === "All"
       ? slots
       : slots.filter((s) => s.category === categoryFilter);
 
@@ -1036,24 +1043,26 @@ export function CustomSlotsSection({
         )}
       </div>
 
-      {/* Category filter chips */}
-      <div className="flex gap-2 pb-4 overflow-x-auto scrollbar-none">
-        {["All", ...SLOT_CATEGORIES].map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            data-ocid={"community_slots.filter.tab"}
-            onClick={() => setCategoryFilter(cat)}
-            className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
-              categoryFilter === cat
-                ? "bg-primary text-white shadow-sm"
-                : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+      {/* Category filter chips — only shown on the global community page, not per-category */}
+      {!categoryId && (
+        <div className="flex gap-2 pb-4 overflow-x-auto scrollbar-none">
+          {["All", ...SLOT_CATEGORIES].map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              data-ocid={"community_slots.filter.tab"}
+              onClick={() => setCategoryFilter(cat)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
+                categoryFilter === cat
+                  ? "bg-primary text-white shadow-sm"
+                  : "bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Slot grid */}
       {isLoading ? (

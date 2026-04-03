@@ -110,7 +110,7 @@ export function useRegisterForProduct() {
   });
   return {
     ...mutation,
-    isActorReady: !!actor && !actorFetching && isAuthenticated,
+    isActorReady: !!actor && !actorFetching,
   };
 }
 
