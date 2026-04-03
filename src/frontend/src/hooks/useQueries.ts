@@ -69,7 +69,7 @@ export function useProductCounts(category: string, products: string[]) {
 }
 
 export function useRegisterForProduct() {
-  const { actor, isFetching } = useActor();
+  const { actor, isReady: actorIsReady } = useActor();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
   const queryClient = useQueryClient();
@@ -110,7 +110,7 @@ export function useRegisterForProduct() {
   });
   return {
     ...mutation,
-    isActorReady: !!identity && !!actor && !isFetching,
+    isActorReady: !!identity && !!actor && actorIsReady,
   };
 }
 
@@ -466,7 +466,7 @@ export function useCustomSlots() {
 }
 
 export function useCreateCustomSlot() {
-  const { actor, isFetching } = useActor();
+  const { actor, isReady: actorIsReady } = useActor();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
   const queryClient = useQueryClient();
@@ -503,7 +503,7 @@ export function useCreateCustomSlot() {
   });
   return {
     ...mutation,
-    isActorReady: !!identity && !!actor && !isFetching,
+    isActorReady: !!identity && !!actor && actorIsReady,
   };
 }
 
