@@ -16,8 +16,6 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
-import { useActor } from "../hooks/useActor";
-import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useCreateCustomSlot,
   useCustomSlotMemberCount,
@@ -337,10 +335,6 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createSlot = useCreateCustomSlot();
   const _joinSlot = useJoinCustomSlot();
-  const { identity } = useInternetIdentity();
-  const { actor, isFetching: actorFetching } = useActor();
-  const _isAuthenticated = !!identity;
-  const isActorReady = !!actor && !actorFetching;
   const queryClient = useQueryClient();
 
   const isLockedCategory = categoryId !== undefined && categoryId !== "Other";
@@ -610,7 +604,7 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
             <Button
               type="submit"
               data-ocid="create_slot.submit_button"
-              disabled={isSubmitting || !isActorReady}
+              disabled={isSubmitting}
               className="w-full bg-primary text-primary-foreground font-bold h-12 rounded-xl"
             >
               {isSubmitting ? (

@@ -69,7 +69,7 @@ export function useProductCounts(category: string, products: string[]) {
 }
 
 export function useRegisterForProduct() {
-  const { actor, isFetching: actorFetching } = useActor();
+  const { actor } = useActor();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
   const queryClient = useQueryClient();
@@ -110,7 +110,7 @@ export function useRegisterForProduct() {
   });
   return {
     ...mutation,
-    isActorReady: !!actor && !actorFetching,
+    isActorReady: !!identity,
   };
 }
 
