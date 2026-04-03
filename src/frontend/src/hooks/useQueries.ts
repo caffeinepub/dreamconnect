@@ -70,6 +70,8 @@ export function useProductCounts(category: string, products: string[]) {
 
 export function useRegisterForProduct() {
   const { actor, isFetching: actorFetching } = useActor();
+  const { identity } = useInternetIdentity();
+  const isAuthenticated = !!identity;
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: async ({
@@ -87,7 +89,9 @@ export function useRegisterForProduct() {
       location: string;
       requirements: string;
     }) => {
-      if (!actor) throw new Error("Not connected");
+      if (!identity) throw new Error("Please sign in first");
+      if (!actor || !isAuthenticated)
+        throw new Error("Please wait while we connect your account...");
       return actor.registerForProduct(
         category,
         product,
@@ -104,7 +108,10 @@ export function useRegisterForProduct() {
       queryClient.invalidateQueries({ queryKey: ["myRegistrations"] });
     },
   });
-  return { ...mutation, isActorReady: !!actor && !actorFetching };
+  return {
+    ...mutation,
+    isActorReady: !!actor && !actorFetching && isAuthenticated,
+  };
 }
 
 export function useMyRegistrations() {

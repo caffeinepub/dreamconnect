@@ -17,7 +17,7 @@ import {
   Video,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 interface OpenChat {
   serviceProviderId: string;
@@ -117,6 +117,73 @@ function QuoteCard({
   );
 }
 
+// Generate array of month labels from current month, going N months ahead
+function generateMonthTabs(count = 12) {
+  const now = new Date();
+  const tabs: { label: string; year: number; month: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    tabs.push({
+      label: d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
+      year: d.getFullYear(),
+      month: d.getMonth(), // 0-indexed
+    });
+  }
+  return tabs;
+}
+
+// Map a requirements string + timestamp to a year/month bucket
+function getMemberMonth(
+  requirements: string,
+  timestamp: bigint,
+): { year: number; month: number } {
+  const now = new Date();
+  const req = (requirements || "").toLowerCase();
+
+  // Keyword mappings
+  if (
+    req.includes("within 1 week") ||
+    req.includes("within this month") ||
+    req.includes("this month") ||
+    req.includes("within 2 weeks") ||
+    req.includes("within a week")
+  ) {
+    return { year: now.getFullYear(), month: now.getMonth() };
+  }
+  if (req.includes("next month")) {
+    const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return { year: d.getFullYear(), month: d.getMonth() };
+  }
+  if (
+    req.includes("within 3 months") ||
+    req.includes("within 2-3 months") ||
+    req.includes("2-3 months") ||
+    req.includes("within 2 months")
+  ) {
+    const d = new Date(now.getFullYear(), now.getMonth() + 2, 1);
+    return { year: d.getFullYear(), month: d.getMonth() };
+  }
+  if (req.includes("within 6 months") || req.includes("6 months")) {
+    const d = new Date(now.getFullYear(), now.getMonth() + 5, 1);
+    return { year: d.getFullYear(), month: d.getMonth() };
+  }
+  if (
+    req.includes("within a year") ||
+    req.includes("within 1 year") ||
+    req.includes("1 year")
+  ) {
+    const d = new Date(now.getFullYear(), now.getMonth() + 11, 1);
+    return { year: d.getFullYear(), month: d.getMonth() };
+  }
+  if (req.includes("within 1 month") || req.includes("this month")) {
+    return { year: now.getFullYear(), month: now.getMonth() };
+  }
+
+  // Fall back to timestamp month
+  const regDate = new Date(Number(timestamp) / 1_000_000);
+  return { year: regDate.getFullYear(), month: regDate.getMonth() };
+}
+
 export function SlotDetailPage({
   category,
   product,
@@ -133,6 +200,30 @@ export function SlotDetailPage({
     category,
     product,
   );
+
+  // Month tabs
+  const monthTabs = useMemo(() => generateMonthTabs(12), []);
+  const [activeMonthIdx, setActiveMonthIdx] = useState(0); // default = current month
+
+  // Count members per month tab
+  const memberCountsByMonth = useMemo(() => {
+    return monthTabs.map(
+      (tab) =>
+        members.filter((m) => {
+          const { year, month } = getMemberMonth(m.requirements, m.timestamp);
+          return year === tab.year && month === tab.month;
+        }).length,
+    );
+  }, [members, monthTabs]);
+
+  // Filtered members for active month
+  const filteredMembers = useMemo(() => {
+    const tab = monthTabs[activeMonthIdx];
+    return members.filter((m) => {
+      const { year, month } = getMemberMonth(m.requirements, m.timestamp);
+      return year === tab.year && month === tab.month;
+    });
+  }, [members, monthTabs, activeMonthIdx]);
 
   const callUrl = `https://meet.jit.si/letzclub-${category
     .toLowerCase()
@@ -163,7 +254,7 @@ export function SlotDetailPage({
     <>
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
-        <div className="flex items-center gap-3 mb-8">
+        <div className="flex items-center gap-3 mb-6">
           <Button
             data-ocid="slot_detail.back_button"
             variant="ghost"
@@ -227,6 +318,42 @@ export function SlotDetailPage({
           </Button>
         </div>
 
+        {/* Month Timeline Tabs */}
+        <div className="mb-6">
+          <div
+            data-ocid="slot_detail.timeline_tabs"
+            className="flex gap-2 overflow-x-auto pb-2"
+            style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+          >
+            {monthTabs.map((tab, idx) => (
+              <button
+                key={tab.label}
+                type="button"
+                data-ocid={`slot_detail.timeline.tab.${idx + 1}`}
+                onClick={() => setActiveMonthIdx(idx)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                  idx === activeMonthIdx
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+                {memberCountsByMonth[idx] > 0 && (
+                  <span
+                    className={`ml-1.5 text-xs font-bold ${
+                      idx === activeMonthIdx
+                        ? "opacity-80"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    ({memberCountsByMonth[idx]})
+                  </span>
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Members Section */}
           <section>
@@ -238,7 +365,7 @@ export function SlotDetailPage({
                 Slot Members
               </h2>
               <span className="ml-auto text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full font-medium">
-                {members.length} registered
+                {filteredMembers.length} in {monthTabs[activeMonthIdx].label}
               </span>
             </div>
 
@@ -262,7 +389,7 @@ export function SlotDetailPage({
                   <Skeleton key={i} className="h-20 rounded-xl" />
                 ))}
               </div>
-            ) : members.length === 0 ? (
+            ) : filteredMembers.length === 0 ? (
               <div
                 data-ocid="slot_detail.empty_state"
                 className="rounded-2xl border border-dashed border-border p-10 text-center"
@@ -272,15 +399,15 @@ export function SlotDetailPage({
                   className="text-muted-foreground mx-auto mb-3"
                 />
                 <p className="font-semibold text-foreground text-sm">
-                  No members yet
+                  No members in {monthTabs[activeMonthIdx].label}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Be the first to register interest!
+                  Be the first to join for this month!
                 </p>
               </div>
             ) : (
               <div className="space-y-3">
-                {members.map((member, idx) => (
+                {filteredMembers.map((member, idx) => (
                   <motion.div
                     key={String(member.id)}
                     data-ocid={`slot_detail.members.item.${idx + 1}`}

@@ -5,7 +5,6 @@ import {
 } from "@/components/LocationSelector";
 import { ProviderHomeScreen } from "@/components/ProviderView";
 import { SlotDetailPage } from "@/components/SlotDetailPage";
-import { TimelinePreviewPage } from "@/components/TimelinePreview";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -184,6 +183,24 @@ const CATEGORIES = [
     color: "oklch(0.65 0.22 200)",
   },
   {
+    id: "Medical",
+    label: "Medical",
+    icon: Stethoscope,
+    color: "oklch(0.62 0.20 165)",
+  },
+  {
+    id: "Agriculture",
+    label: "Agriculture",
+    icon: Tractor,
+    color: "oklch(0.65 0.18 140)",
+  },
+  {
+    id: "Purchase Machinery",
+    label: "Machinery",
+    icon: Wrench,
+    color: "oklch(0.60 0.16 250)",
+  },
+  {
     id: "Other",
     label: "Other",
     icon: FlameKindling,
@@ -343,6 +360,9 @@ const FALLBACK_PRODUCTS: Record<string, string[]> = {
     "Finance Influencers",
     "Education Influencers",
   ],
+  Medical: [],
+  Agriculture: [],
+  "Purchase Machinery": [],
   Other: [],
 };
 
@@ -353,6 +373,9 @@ const CUSTOM_SLOT_ONLY_CATEGORIES = [
   "Gym",
   "Courses",
   "Sports & Recreation",
+  "Medical",
+  "Agriculture",
+  "Purchase Machinery",
   "Other",
 ];
 
@@ -363,7 +386,33 @@ function getBarColor(count: number): string {
   return "oklch(0.62 0.18 145)";
 }
 
-type Page = "home" | "my-registrations" | "admin" | "timeline-preview";
+// ===== MONTH TIMELINE HELPERS =====
+function generateMonthTabsHome(count = 12) {
+  const now = new Date();
+  const tabs: { label: string; year: number; month: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    tabs.push({
+      label: d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
+      year: d.getFullYear(),
+      month: d.getMonth(),
+    });
+  }
+  return tabs;
+}
+const HOME_MONTH_TABS = generateMonthTabsHome(12);
+
+function getMemberMonthHome(_r: { location: string; product: string }): {
+  year: number;
+  month: number;
+} {
+  // For public registrations we only have product + location, no timestamp or requirements
+  // Default to current month as baseline for public registration counts
+  const now = new Date();
+  return { year: now.getFullYear(), month: now.getMonth() };
+}
+
+type Page = "home" | "my-registrations" | "admin";
 
 // ===== WELCOME / AUTH SCREEN =====
 function WelcomeScreen({
@@ -660,6 +709,31 @@ interface RegModalProps {
   onClose: () => void;
   prefilledLocation?: string;
   onEditLocation?: () => void;
+  selectedMonth?: { label: string; year: number; month: number };
+}
+
+// Categories that default to 'specific' date (event/product-based)
+const SPECIFIC_DATE_CATEGORIES = new Set([
+  "Food",
+  "Events & Entertainment",
+  "Beauty",
+]);
+
+function getDefaultDateMode(category: string): "specific" | "flexible" {
+  return SPECIFIC_DATE_CATEGORIES.has(category) ? "specific" : "flexible";
+}
+
+function getDefaultFlexibleTimeline(monthIdx: number): string {
+  if (monthIdx <= 0) return "Within this month";
+  if (monthIdx === 1) return "Next month";
+  if (monthIdx <= 3) return "Within 3 months";
+  if (monthIdx <= 6) return "Within 6 months";
+  return "Within a year";
+}
+
+function getMonthLastDay(year: number, month: number): string {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return String(lastDay).padStart(2, "0");
 }
 
 function RegistrationModal({
@@ -668,19 +742,48 @@ function RegistrationModal({
   onClose,
   prefilledLocation,
   onEditLocation,
+  selectedMonth,
 }: RegModalProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState(prefilledLocation ?? "");
   const [requirements, setRequirements] = useState("");
-  const [requirementDate, setRequirementDate] = useState("");
+  const [dateMode, setDateMode] = useState<"specific" | "flexible">(() =>
+    getDefaultDateMode(category),
+  );
+
+  // Calculate the index of the selected month relative to current month
+  const selectedMonthIdx = selectedMonth
+    ? (() => {
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curMonth = now.getMonth();
+        return (
+          (selectedMonth.year - curYear) * 12 + (selectedMonth.month - curMonth)
+        );
+      })()
+    : 0;
+
+  const [flexibleTimeline, setFlexibleTimeline] = useState<string>(() =>
+    getDefaultFlexibleTimeline(selectedMonthIdx),
+  );
+
+  // Initialize date to first day of selectedMonth if in specific mode
+  const initialDate =
+    selectedMonth && getDefaultDateMode(category) === "specific"
+      ? `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-01`
+      : "";
+  const [requirementDate, setRequirementDate] = useState(initialDate);
   const [submitted, setSubmitted] = useState(false);
   const register = useRegisterForProduct();
 
   const doRegister = async () => {
-    const fullRequirements = requirementDate
-      ? `${requirements} [Expected by: ${new Date(requirementDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}]`
-      : requirements;
+    const fullRequirements =
+      dateMode === "flexible"
+        ? `${requirements} [Timeline: ${flexibleTimeline}]`
+        : requirementDate
+          ? `${requirements} [Expected by: ${new Date(requirementDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}]`
+          : requirements;
     try {
       await register.mutateAsync({
         category,
@@ -853,18 +956,74 @@ function RegistrationModal({
                 )}
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="reg-date" className="text-sm font-medium">
+                <Label className="text-sm font-medium">
                   Expected Date / Timeline
                 </Label>
-                <Input
-                  id="reg-date"
-                  data-ocid="register.date_input"
-                  type="date"
-                  value={requirementDate}
-                  onChange={(e) => setRequirementDate(e.target.value)}
-                  className="bg-muted border-border focus:border-primary"
-                  min={new Date().toISOString().split("T")[0]}
-                />
+                {/* Mode toggle — styled like category/month tabs */}
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    data-ocid="register.date_mode.specific_toggle"
+                    onClick={() => setDateMode("specific")}
+                    className={`flex-1 py-1.5 px-3 rounded-full text-xs font-semibold border transition-all ${
+                      dateMode === "specific"
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-muted text-muted-foreground border-transparent hover:border-border"
+                    }`}
+                  >
+                    📅 Specific Date
+                  </button>
+                  <button
+                    type="button"
+                    data-ocid="register.date_mode.flexible_toggle"
+                    onClick={() => setDateMode("flexible")}
+                    className={`flex-1 py-1.5 px-3 rounded-full text-xs font-semibold border transition-all ${
+                      dateMode === "flexible"
+                        ? "bg-primary text-primary-foreground border-primary shadow-sm"
+                        : "bg-muted text-muted-foreground border-transparent hover:border-border"
+                    }`}
+                  >
+                    🗓️ Flexible Timeline
+                  </button>
+                </div>
+                {dateMode === "specific" ? (
+                  <Input
+                    id="reg-date"
+                    data-ocid="register.date_input"
+                    type="date"
+                    value={requirementDate}
+                    onChange={(e) => setRequirementDate(e.target.value)}
+                    className="bg-muted border-border focus:border-primary"
+                    min={
+                      selectedMonth
+                        ? `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-01`
+                        : new Date().toISOString().split("T")[0]
+                    }
+                    max={
+                      selectedMonth
+                        ? `${selectedMonth.year}-${String(selectedMonth.month + 1).padStart(2, "0")}-${getMonthLastDay(selectedMonth.year, selectedMonth.month)}`
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <select
+                    data-ocid="register.flexible_timeline_select"
+                    value={flexibleTimeline}
+                    onChange={(e) => setFlexibleTimeline(e.target.value)}
+                    className="w-full h-10 px-3 rounded-xl bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
+                  >
+                    <option value="Within a week">Within a week</option>
+                    <option value="Within 2 weeks">Within 2 weeks</option>
+                    <option value="Within this month">Within this month</option>
+                    <option value="Next month">Next month</option>
+                    <option value="Within 3 months">Within 3 months</option>
+                    <option value="Within 6 months">Within 6 months</option>
+                    <option value="Within a year">Within a year</option>
+                    <option value="No rush / Flexible">
+                      No rush / Flexible
+                    </option>
+                  </select>
+                )}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="reg-req" className="text-sm font-medium">
@@ -988,11 +1147,46 @@ function CustomSlotOnlyView({
             },
           ],
         };
+      case "Medical":
+        return {
+          heading: "Create a custom slot for Medical",
+          subheading:
+            "Connect with healthcare providers and find the right specialist near you.",
+          examples: [
+            {
+              title: "Looking for full body checkup in Hyderabad",
+              detail: "Within 2 weeks",
+            },
+          ],
+        };
+      case "Agriculture":
+        return {
+          heading: "Create a custom slot for Agriculture",
+          subheading: "Find equipment, seeds, or farming services near you.",
+          examples: [
+            {
+              title: "Looking for tractor rental in Warangal district",
+              detail: "Within a month",
+            },
+          ],
+        };
+      case "Purchase Machinery":
+        return {
+          heading: "Create a custom slot for Purchase Machinery",
+          subheading:
+            "Find the right industrial or commercial machinery for your business.",
+          examples: [
+            {
+              title: "Looking to buy a CNC machine in Pune",
+              detail: "Budget ₹5,00,000",
+            },
+          ],
+        };
       default:
         return {
-          heading: "Can't find what you are looking for?",
+          heading: "Can't find the category you are looking for?",
           subheading:
-            "Create a custom slot for your specific requirement and invite others to join.",
+            "Create a custom slot and describe what you need — others with the same need will join you.",
           examples: [],
         };
     }
@@ -1074,6 +1268,56 @@ function CustomSlotOnlyView({
         />
       </div>
     </motion.div>
+  );
+}
+
+// ===== MEMBER AVATAR STACK =====
+function MemberAvatarStack({
+  count,
+  names = [],
+}: { count: number; names?: string[] }) {
+  if (count === 0) return null;
+
+  const colors = [
+    "oklch(0.65 0.18 230)",
+    "oklch(0.65 0.18 310)",
+    "oklch(0.65 0.18 145)",
+    "oklch(0.65 0.18 55)",
+  ];
+
+  const displayCount = Math.min(4, count);
+  const remaining = count - displayCount;
+
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex -space-x-2">
+        {Array.from({ length: displayCount }, (_, i) => i).map((i) => {
+          const name = names[i] || `M${i + 1}`;
+          const initial = name.charAt(0).toUpperCase();
+          const color = colors[i % colors.length];
+          return (
+            <div
+              key={`avatar-${i}`}
+              className="w-7 h-7 rounded-full border-2 border-card flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0"
+              style={{ background: color, zIndex: displayCount - i }}
+            >
+              {initial}
+            </div>
+          );
+        })}
+        {remaining > 0 && (
+          <div
+            className="w-7 h-7 rounded-full border-2 border-card flex items-center justify-center text-[9px] font-bold bg-muted text-muted-foreground flex-shrink-0"
+            style={{ zIndex: 0 }}
+          >
+            +{remaining}
+          </div>
+        )}
+      </div>
+      <span className="text-xs text-muted-foreground">
+        {count} {count === 1 ? "member" : "members"}
+      </span>
+    </div>
   );
 }
 
@@ -1173,6 +1417,8 @@ function ProductCard({
         />
       </div>
 
+      <MemberAvatarStack count={count} />
+
       <div className="flex gap-2">
         <Button
           data-ocid="register.open_modal_button"
@@ -1244,6 +1490,7 @@ function HomePage({
   const [searchFocused, setSearchFocused] = useState(false);
   const [vehicleSubType, setVehicleSubType] = useState("all");
   const [externalCreateOpen, setExternalCreateOpen] = useState(false);
+  const [activeHomeMonthIdx, setActiveHomeMonthIdx] = useState(0);
 
   const SEARCH_EXAMPLES = [
     "Try: AC Bangalore",
@@ -1535,6 +1782,70 @@ function HomePage({
           </div>
         )}
 
+      {/* Month Timeline Tabs */}
+      {!CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory) && (
+        <div
+          data-ocid="home.timeline_tabs"
+          className="flex gap-2 overflow-x-auto mb-5 pb-1"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {HOME_MONTH_TABS.map((tab, idx) => {
+            const count = publicRegs.filter(
+              (r: PublicRegistration) =>
+                getMemberMonthHome(r).year === tab.year &&
+                getMemberMonthHome(r).month === tab.month,
+            ).length;
+            return (
+              <button
+                key={tab.label}
+                type="button"
+                data-ocid={`home.timeline.tab.${idx + 1}`}
+                onClick={() => setActiveHomeMonthIdx(idx)}
+                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                  idx === activeHomeMonthIdx
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+                }`}
+              >
+                {tab.label}
+                {count > 0 && (
+                  <span
+                    className={`ml-1.5 text-xs font-bold ${idx === activeHomeMonthIdx ? "opacity-80" : "text-muted-foreground"}`}
+                  >
+                    ({count})
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Create Custom Slot CTA for regular categories */}
+      {!CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory) && (
+        <div className="mb-4 flex items-center gap-3 p-3 rounded-xl border border-dashed border-border bg-muted/30">
+          <div className="flex-1">
+            <p className="text-xs text-muted-foreground">
+              Can't find what you need in this category?
+            </p>
+          </div>
+          <button
+            type="button"
+            data-ocid="home.create_custom_slot_button"
+            onClick={() => {
+              if (!isAuthenticated) {
+                onAuthRequired();
+                return;
+              }
+              setExternalCreateOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs font-bold hover:opacity-90 transition-opacity flex-shrink-0"
+          >
+            + Create Custom Slot
+          </button>
+        </div>
+      )}
+
       {/* Product Grid */}
       {CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory) ? (
         <CustomSlotOnlyView
@@ -1665,6 +1976,7 @@ function HomePage({
               setSelectedProduct(null);
               setLocationSelectorOpen(true);
             }}
+            selectedMonth={HOME_MONTH_TABS[activeHomeMonthIdx]}
           />
         )}
       </AnimatePresence>
@@ -2500,17 +2812,6 @@ function LetzclubApp() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setPage("timeline-preview")}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                    page === "timeline-preview"
-                      ? "bg-amber-500/20 text-amber-400"
-                      : "bg-amber-500/10 text-amber-500 hover:bg-amber-500/20"
-                  }`}
-                >
-                  🔍 Preview Options
-                </button>
-                <button
-                  type="button"
                   data-ocid="nav.my_registrations_link"
                   onClick={() => setPage("my-registrations")}
                   className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
@@ -2616,9 +2917,6 @@ function LetzclubApp() {
               >
                 <MyRegistrationsPage />
               </motion.div>
-            )}
-            {page === "timeline-preview" && (
-              <TimelinePreviewPage onBack={() => setPage("home")} />
             )}
             {page === "admin" && isAdmin && (
               <motion.div
