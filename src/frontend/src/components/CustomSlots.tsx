@@ -604,13 +604,17 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
             <Button
               type="submit"
               data-ocid="create_slot.submit_button"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !createSlot.isActorReady}
               className="w-full bg-primary text-primary-foreground font-bold h-12 rounded-xl"
             >
-              {isSubmitting ? (
+              {isSubmitting || !createSlot.isActorReady ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              {isSubmitting ? "Creating..." : "Create Slot"}
+              {isSubmitting
+                ? "Creating..."
+                : !createSlot.isActorReady
+                  ? "Connecting..."
+                  : "Create Slot"}
             </Button>
           </form>
         </div>

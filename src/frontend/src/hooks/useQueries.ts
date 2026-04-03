@@ -69,7 +69,7 @@ export function useProductCounts(category: string, products: string[]) {
 }
 
 export function useRegisterForProduct() {
-  const { actor } = useActor();
+  const { actor, isFetching } = useActor();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
   const queryClient = useQueryClient();
@@ -110,7 +110,7 @@ export function useRegisterForProduct() {
   });
   return {
     ...mutation,
-    isActorReady: !!identity,
+    isActorReady: !!identity && !!actor && !isFetching,
   };
 }
 
@@ -466,11 +466,11 @@ export function useCustomSlots() {
 }
 
 export function useCreateCustomSlot() {
-  const { actor } = useActor();
+  const { actor, isFetching } = useActor();
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
   const queryClient = useQueryClient();
-  return useMutation({
+  const mutation = useMutation({
     mutationFn: async (vars: {
       title: string;
       category: string;
@@ -501,6 +501,10 @@ export function useCreateCustomSlot() {
       queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
     },
   });
+  return {
+    ...mutation,
+    isActorReady: !!identity && !!actor && !isFetching,
+  };
 }
 
 export function useJoinCustomSlot() {
