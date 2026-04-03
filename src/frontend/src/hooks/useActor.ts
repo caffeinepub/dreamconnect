@@ -27,25 +27,13 @@ export function useActor() {
 
       const actor = await createActorWithConfig(actorOptions);
       const adminToken = getSecretParameter("caffeineAdminToken") || "";
-
-      // Race the init call against a 5s timeout — if init hangs, we still
-      // return the actor so the UI doesn't stay stuck on "Connecting..."
-      try {
-        await Promise.race([
-          actor._initializeAccessControlWithSecret(adminToken),
-          new Promise<void>((resolve) => setTimeout(resolve, 5000)),
-        ]);
-      } catch {
-        // Ignore init errors — actor is still usable for regular calls
-      }
-
+      await actor._initializeAccessControlWithSecret(adminToken);
       return actor;
     },
     // Only refetch when identity changes
     staleTime: Number.POSITIVE_INFINITY,
     // This will cause the actor to be recreated when the identity changes
     enabled: true,
-    retry: 2,
   });
 
   // When the actor changes, invalidate dependent queries
@@ -66,8 +54,6 @@ export function useActor() {
 
   return {
     actor: actorQuery.data || null,
-    // Consider NOT fetching if we already have data — avoids blocking the UI
-    // on a background refetch when the actor is already available
-    isFetching: actorQuery.isFetching && !actorQuery.data,
+    isFetching: actorQuery.isFetching,
   };
 }

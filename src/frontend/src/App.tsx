@@ -1095,9 +1095,9 @@ function CustomSlotOnlyView({
     switch (activeCategory) {
       case "Real Estate":
         return {
-          heading: "Create a custom slot for Real Estate",
+          heading: "Not listed in Real Estate?",
           subheading:
-            "Post your requirement and let serious buyers connect with you.",
+            "Create a custom slot and connect with others who need the same service.",
           examples: [
             {
               title: "Looking for 2BHK flat in your location",
@@ -1115,8 +1115,9 @@ function CustomSlotOnlyView({
         };
       case "Gym":
         return {
-          heading: "Create a custom slot for Gym",
-          subheading: "Connect with gyms near you or find workout partners.",
+          heading: "Not listed in Gym?",
+          subheading:
+            "Create a custom slot and connect with others who need the same service.",
           examples: [
             {
               title: "Planning to join a gym in your location",
@@ -1126,9 +1127,9 @@ function CustomSlotOnlyView({
         };
       case "Courses":
         return {
-          heading: "Create a custom slot for Courses",
+          heading: "Not listed in Courses?",
           subheading:
-            "Find others joining the same course and get group deals.",
+            "Create a custom slot and connect with others who need the same service.",
           examples: [
             {
               title: "Planning to join Java Full Stack course",
@@ -1138,8 +1139,9 @@ function CustomSlotOnlyView({
         };
       case "Sports & Recreation":
         return {
-          heading: "Create a custom slot for Sports",
-          subheading: "Find sport partners and coaches near you.",
+          heading: "Not listed in Sports & Recreation?",
+          subheading:
+            "Create a custom slot and connect with others who need the same service.",
           examples: [
             {
               title: "Looking for cricket partners in your location",
@@ -1149,9 +1151,9 @@ function CustomSlotOnlyView({
         };
       case "Medical":
         return {
-          heading: "Create a custom slot for Medical",
+          heading: "Not listed in Medical?",
           subheading:
-            "Connect with healthcare providers and find the right specialist near you.",
+            "Create a custom slot and connect with others who need the same service.",
           examples: [
             {
               title: "Looking for full body checkup in Hyderabad",
@@ -1161,8 +1163,9 @@ function CustomSlotOnlyView({
         };
       case "Agriculture":
         return {
-          heading: "Create a custom slot for Agriculture",
-          subheading: "Find equipment, seeds, or farming services near you.",
+          heading: "Not listed in Agriculture?",
+          subheading:
+            "Create a custom slot and connect with others who need the same service.",
           examples: [
             {
               title: "Looking for tractor rental in Warangal district",
@@ -1172,9 +1175,9 @@ function CustomSlotOnlyView({
         };
       case "Purchase Machinery":
         return {
-          heading: "Create a custom slot for Purchase Machinery",
+          heading: "Not listed in Purchase Machinery?",
           subheading:
-            "Find the right industrial or commercial machinery for your business.",
+            "Create a custom slot and connect with others who need the same service.",
           examples: [
             {
               title: "Looking to buy a CNC machine in Pune",
@@ -1184,9 +1187,9 @@ function CustomSlotOnlyView({
         };
       default:
         return {
-          heading: "Can't find the category you are looking for?",
+          heading: "Not finding your category here?",
           subheading:
-            "Create a custom slot and describe what you need — others with the same need will join you.",
+            "Create a custom slot for what you need — others will join you.",
           examples: [],
         };
     }
@@ -1208,6 +1211,29 @@ function CustomSlotOnlyView({
       >
         <CatIcon size={28} style={{ color: catColor }} />
       </div>
+
+      {isAuthenticated ? (
+        <button
+          type="button"
+          data-ocid="custom_slot_only.create_slot_button"
+          onClick={() => setExternalCreateOpen(true)}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95 mb-5"
+          style={{ background: catColor }}
+        >
+          Create Custom Slot
+        </button>
+      ) : (
+        <button
+          type="button"
+          data-ocid="custom_slot_only.create_slot_button"
+          onClick={onAuthRequired}
+          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95 mb-5"
+          style={{ background: catColor }}
+        >
+          Sign In to Create a Slot
+        </button>
+      )}
+
       <h3 className="font-display text-2xl font-bold text-foreground mb-2">
         {heading}
       </h3>
@@ -1238,33 +1264,13 @@ function CustomSlotOnlyView({
         </div>
       )}
 
-      {isAuthenticated ? (
-        <button
-          type="button"
-          data-ocid="custom_slot_only.create_slot_button"
-          onClick={() => setExternalCreateOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95"
-          style={{ background: catColor }}
-        >
-          Create a Custom Slot
-        </button>
-      ) : (
-        <button
-          type="button"
-          data-ocid="custom_slot_only.create_slot_button"
-          onClick={onAuthRequired}
-          className="flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-white text-sm shadow-glow transition-all hover:opacity-90 active:scale-95"
-          style={{ background: catColor }}
-        >
-          Sign In to Create a Slot
-        </button>
-      )}
       <div className="w-full mt-12">
         <CustomSlotsSection
           isAuthenticated={isAuthenticated}
           onAuthRequired={onAuthRequired}
           externalCreateOpen={externalCreateOpen}
           onExternalCreateClose={() => setExternalCreateOpen(false)}
+          categoryId={activeCategory}
         />
       </div>
     </motion.div>
@@ -1826,7 +1832,7 @@ function HomePage({
         <div className="mb-4 flex items-center gap-3 p-3 rounded-xl border border-dashed border-border bg-muted/30">
           <div className="flex-1">
             <p className="text-xs text-muted-foreground">
-              Can't find what you need in this category?
+              Not listed in {activeCategory}?
             </p>
           </div>
           <button
@@ -1962,6 +1968,19 @@ function HomePage({
               onAuthRequired={onAuthRequired}
             />
           ))}
+        </div>
+      )}
+
+      {/* Community Slots for regular categories */}
+      {!CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory) && (
+        <div className="mt-8">
+          <CustomSlotsSection
+            isAuthenticated={isAuthenticated}
+            onAuthRequired={onAuthRequired}
+            externalCreateOpen={externalCreateOpen}
+            onExternalCreateClose={() => setExternalCreateOpen(false)}
+            categoryId={activeCategory}
+          />
         </div>
       )}
 

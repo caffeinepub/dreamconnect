@@ -3,7 +3,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Loader2, MapPin, Plus, Tag, Users } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  Lock,
+  MapPin,
+  Plus,
+  Tag,
+  Users,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -28,18 +36,39 @@ const SLOT_CATEGORIES = [
   "Beauty",
   "Construction Materials",
   "Business Services",
-  "Decor",
-  "Home Services",
-  "Travel",
-  "Agriculture",
-  "Food & Catering",
+  "Food",
   "Events & Entertainment",
   "Sports & Recreation",
   "Pets & Animals",
-  "Printing & Stationery",
-  "Logistics & Transport",
+  "Marketing",
+  "Agriculture",
+  "Purchase Machinery",
   "Other",
 ];
+
+const CATEGORY_SLOT_EXAMPLES: Record<string, string> = {
+  "Electronics & Appliances": "e.g. Fan, Ceiling Fan, Water Heater, Air Cooler",
+  Vehicles: "e.g. Auto Rickshaw, Golf Cart, Electric Scooter",
+  "Interior Designing": "e.g. Modular Kitchen, False Ceiling, Wallpaper",
+  Furniture: "e.g. Bean Bag, Recliner, Shoe Rack, Study Table",
+  Beauty: "e.g. Hair Straightener, Nail Art Kit, Keratin Treatment",
+  "Construction Materials": "e.g. PVC Pipes, Door Frames, Floor Tiles",
+  "Business Services": "e.g. Logo Design, GST Filing, Social Media Management",
+  Food: "e.g. Biryani Catering, Tiffin Service, Birthday Cake Delivery",
+  "Events & Entertainment":
+    "e.g. DJ for Wedding, Birthday Decoration, Event Anchor",
+  "Pets & Animals": "e.g. Rabbit, Hamster, Parrot, Fish Tank Setup",
+  "Sports & Recreation":
+    "e.g. Badminton Court Booking, Yoga Classes, Swimming Coach",
+  Marketing: "e.g. YouTube Channel Promotion, Reel Creator, Brand Ambassador",
+  "Real Estate": "e.g. Warehouse Space, Shop on Rent, Agricultural Land",
+  Gym: "e.g. CrossFit Studio, Zumba Classes, Yoga Studio",
+  Courses: "e.g. IELTS Preparation, Graphic Design Course, Digital Marketing",
+  Medical: "e.g. Physiotherapy, Dental Checkup, Eye Test",
+  Agriculture: "e.g. Drip Irrigation Setup, Organic Fertilizer, Crop Insurance",
+  "Purchase Machinery": "e.g. Lathe Machine, Hydraulic Press, 3D Printer",
+  Other: "e.g. Astrology, Handicrafts, Vintage Furniture, Calligraphy",
+};
 
 const CATEGORY_COLORS: Record<string, string> = {
   "Electronics & Appliances": "oklch(0.6 0.2 230)",
@@ -53,16 +82,13 @@ const CATEGORY_COLORS: Record<string, string> = {
   Beauty: "oklch(0.68 0.18 350)",
   "Construction Materials": "oklch(0.68 0.17 70)",
   "Business Services": "oklch(0.60 0.15 250)",
-  Decor: "oklch(0.65 0.15 290)",
-  "Home Services": "oklch(0.64 0.18 195)",
-  Travel: "oklch(0.65 0.22 220)",
   Agriculture: "oklch(0.62 0.20 135)",
-  "Food & Catering": "oklch(0.70 0.20 50)",
+  Food: "oklch(0.70 0.20 50)",
   "Events & Entertainment": "oklch(0.65 0.22 300)",
   "Sports & Recreation": "oklch(0.64 0.22 145)",
   "Pets & Animals": "oklch(0.68 0.18 80)",
-  "Printing & Stationery": "oklch(0.60 0.15 240)",
-  "Logistics & Transport": "oklch(0.62 0.18 25)",
+  Marketing: "oklch(0.65 0.20 280)",
+  "Purchase Machinery": "oklch(0.60 0.18 200)",
   Other: "oklch(0.60 0.12 258)",
 };
 
@@ -226,11 +252,12 @@ function CustomSlotCard({
 // ===== CREATE SLOT MODAL =====
 interface CreateSlotModalProps {
   onClose: () => void;
+  categoryId?: string;
 }
 
-function CreateSlotModal({ onClose }: CreateSlotModalProps) {
+function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
   const [title, setTitle] = useState("");
-  const [category, setCategory] = useState("Electronics & Appliances");
+  const [category, setCategory] = useState(categoryId ?? "Other");
   const [description, setDescription] = useState("");
   const [location, setLocation] = useState("");
   const [maxMembers, setMaxMembers] = useState(20);
@@ -240,6 +267,11 @@ function CreateSlotModal({ onClose }: CreateSlotModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createSlot = useCreateCustomSlot();
   const joinSlot = useJoinCustomSlot();
+
+  const isLockedCategory = categoryId !== undefined && categoryId !== "Other";
+  const titlePlaceholder =
+    CATEGORY_SLOT_EXAMPLES[categoryId ?? "Other"] ??
+    "e.g. What are you looking for?";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -330,38 +362,49 @@ function CreateSlotModal({ onClose }: CreateSlotModalProps) {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* What are you looking for — slot title */}
             <div className="space-y-1.5">
               <Label htmlFor="cs-title" className="text-sm font-medium">
-                Slot Title <span className="text-destructive">*</span>
+                What are you looking for?{" "}
+                <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="cs-title"
                 data-ocid="create_slot.title_input"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Need AC dealers in Chennai"
+                placeholder={titlePlaceholder}
                 className="bg-muted border-border focus:border-primary"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="cs-category" className="text-sm font-medium">
-                Category
-              </Label>
-              <select
-                id="cs-category"
-                data-ocid="create_slot.category_select"
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full h-10 px-3 rounded-xl bg-muted border border-border focus:border-primary text-sm text-foreground focus:outline-none"
-              >
-                {SLOT_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
+            {/* Category — locked or free-text */}
+            {isLockedCategory ? (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Category</Label>
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-muted border border-border text-sm text-foreground">
+                  <span>{categoryId}</span>
+                  <span className="ml-auto flex items-center gap-1 text-xs text-muted-foreground">
+                    <Lock size={11} />
+                    Locked
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                <Label htmlFor="cs-category" className="text-sm font-medium">
+                  What category does your requirement belong to?
+                </Label>
+                <Input
+                  id="cs-category"
+                  data-ocid="create_slot.category_input"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  placeholder="e.g. Astrology, Handicrafts, Vintage Furniture"
+                  className="bg-muted border-border focus:border-primary"
+                />
+              </div>
+            )}
 
             <div className="space-y-1.5">
               <Label htmlFor="cs-location" className="text-sm font-medium">
@@ -863,6 +906,7 @@ export interface CustomSlotsSectionProps {
   onAuthRequired?: () => void;
   externalCreateOpen?: boolean;
   onExternalCreateClose?: () => void;
+  categoryId?: string;
 }
 
 export function CustomSlotsSection({
@@ -870,6 +914,7 @@ export function CustomSlotsSection({
   onAuthRequired = () => {},
   externalCreateOpen = false,
   onExternalCreateClose,
+  categoryId,
 }: CustomSlotsSectionProps) {
   const { data: slots = [], isLoading } = useCustomSlots();
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -1008,6 +1053,7 @@ export function CustomSlotsSection({
               setShowCreateModal(false);
               onExternalCreateClose?.();
             }}
+            categoryId={categoryId}
           />
         )}
         {joiningSlot && (

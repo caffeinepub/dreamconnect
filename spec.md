@@ -1,37 +1,72 @@
 # letzclub
 
 ## Current State
-- 13 categories: Electronics & Appliances, Vehicles, Gym, Courses, Medical, Beauty, Construction Materials, Business Services, Decor, Interior Design, Furniture, Real Estate, Other
-- "Other" category shows product cards: Home Services, Travel, Agriculture, Food & Catering, Events & Entertainment, Sports & Recreation, Pets & Animals, Printing & Stationery, Logistics & Transport, Other/Custom
-- Custom slot cards (CustomSlotCard) show member count as plain text only (e.g. "7/20"), no progress bar
-- Custom slot creation form does NOT collect creator's name, phone, requirements and does NOT auto-join the creator as first member
-- No fee display for creating or joining custom slots
-- CustomSlotsSection is rendered at the bottom of HomePage for all categories
+- Each category (non-custom-slot-only) has a CTA bar at the top: "Can't find what you need in this category?" + "+ Create Custom Slot" button
+- Custom-slot-only categories (Real Estate, Gym, Courses, Sports, Medical, Agriculture, Purchase Machinery, Other) show a `CustomSlotOnlyView` with heading like "Create a custom slot for [Category]" and a button
+- The `CreateSlotModal` in `CustomSlots.tsx` has a category dropdown (`SLOT_CATEGORIES`) showing all old/stale categories including removed ones (Decor, Home Services, Travel, Food & Catering, Logistics & Transport, etc.)
+- The modal title field placeholder is generic: "e.g. Need AC dealers in Chennai"
+- There is no per-category example placeholder text in the slot name/title field
+- The "Other" category's `CustomSlotOnlyView` shows a generic heading with no create button at the top
 
 ## Requested Changes (Diff)
 
 ### Add
-- 9 new categories promoted from "Other" section: Home Services, Travel, Agriculture, Food & Catering, Events & Entertainment, Sports & Recreation, Pets & Animals, Printing & Stationery, Logistics & Transport — each with subcategories, Lucide icons, and OKLCH colors
-- Animated progress bar in CustomSlotCard (same style as ProductCard — fills left-to-right, color changes green→amber→red by capacity)
-- Fee placeholder labels in create custom slot form ("Free for Testing" banner, ₹0 creation fee) and join custom slot form (₹0 join fee) — easy to update later
-- Creator name, phone, location, requirements fields in the create slot form so the creator is auto-joined as first member after slot is created
+- Category-specific example placeholder text in the slot name/title `Input` inside `CreateSlotModal` — each category shows hints for products NOT already listed as slots in that category
+- A free-text field "What category does your requirement belong to?" in `CreateSlotModal` ONLY when `category === 'Other'` (replacing the dropdown entirely for Other)
+- `OTHER_CUSTOM_CATEGORIES` constant: a list of example category hints like "Astrology", "Handicrafts", "Vintage Furniture", "Calligraphy", "Candle Making" shown as placeholder for the Other category field
 
 ### Modify
-- "Other" category section in HomePage: replace product card grid with a single prompt — "Can't find what you are looking for?" + "Create a custom slot" with a "Create" button that opens the CustomSlot creation modal
-- CustomSlots creation form: after createCustomSlot returns the slotId, automatically call joinCustomSlot with the creator's name/phone/location/requirements so they are first member
-- SLOT_CATEGORIES dropdown in create form: keep all 13 existing categories (including the newly promoted ones)
-- CustomSlotsSection: show below the "Other" section prompt instead of at the bottom of all categories
+- **CTA message in regular categories** (non-custom-slot-only): Change from `"Can't find what you need in this category?"` to `"Not listed in [Category Name]?"` where category name is dynamic. The button `+ Create Custom Slot` stays.
+- **`CreateSlotModal` — remove the category `<select>` dropdown entirely**. Instead:
+  - When opened from a specific category (via `categoryId` prop), the category is pre-set and not shown as a dropdown. Replace the dropdown with a read-only badge/label showing the locked category.
+  - When opened from "Other" section, show a free-text input: label "What category does your requirement belong to?" with placeholder "e.g. Astrology, Handicrafts, Vintage Furniture"
+- **`CreateSlotModal` — slot title/name field**: Change label from "Slot Title" to "What are you looking for?" and update placeholder to be category-specific (see examples below)
+- **`CustomSlotOnlyView` for "Other"**: Move the create button ABOVE the heading text. Change heading to `"Not finding your category here?"`. Keep the subheading short.
+- **`CustomSlotOnlyView` for named categories** (Real Estate, Gym, etc.): Change heading format from `"Create a custom slot for [Category]"` to `"Not listed in [Category]?"`. Move button above the heading text.
+- **`CustomSlotsSection`** — pass `categoryId` prop down to `CreateSlotModal` so it can lock the category
+- **`SLOT_CATEGORIES` array in `CustomSlots.tsx`** — remove all stale/removed categories
 
 ### Remove
-- Product cards under "Other" category (Home Services, Travel etc.) — they become real categories now
-- "Other/Custom" as a product entry in FALLBACK_PRODUCTS.Other
+- Category `<select>` dropdown from `CreateSlotModal` (replaced with locked label or free-text field)
+- Old stale categories from `SLOT_CATEGORIES`: Decor, Home Services, Travel, Food & Catering, Logistics & Transport, Printing & Stationery (use updated list)
 
 ## Implementation Plan
-1. Add 9 new categories to CATEGORIES array in App.tsx with icons (Lucide) and OKLCH colors
-2. Add FALLBACK_PRODUCTS entries for each new category with 8-10 relevant subcategories
-3. Add the 9 new categories to backend registration's getCategories (note: backend already accepts any category text, so this is frontend-only)
-4. Redesign the "Other" section in HomePage to show: heading text + Create button + CustomSlotsSection below (remove product card grid for Other)
-5. Add animated progress bar to CustomSlotCard in CustomSlots.tsx (framer-motion width animation same as ProductCard)
-6. Add name, phone, requirements fields to the CreateSlotModal form in CustomSlots.tsx
-7. After createCustomSlot succeeds, call joinCustomSlot with creator's info automatically
-8. Add fee placeholder display in both modals ("Free for Testing" banner)
+
+1. **Update `CustomSlots.tsx`**:
+   - Add `categoryId?: string` prop to `CreateSlotModal` and `CustomSlotsSection`
+   - Remove the category `<select>` dropdown
+   - When `categoryId` is provided and not "Other": show a read-only locked category badge, set `category` state to `categoryId` on mount
+   - When `categoryId === 'Other'` or not provided: show free-text input "What category does your requirement belong to?" with placeholder "e.g. Astrology, Handicrafts, Vintage Furniture"
+   - Change title field label to "What are you looking for?"
+   - Add `CATEGORY_SLOT_EXAMPLES` map: for each category, list example product hints (products NOT in the existing slot list)
+   - Use `CATEGORY_SLOT_EXAMPLES[categoryId]` to build placeholder string for the title field
+   - Clean up `SLOT_CATEGORIES` to only current categories
+
+2. **Update `App.tsx`**:
+   - Update CTA message in regular category view from `"Can't find what you need in this category?"` to `"Not listed in [activeCategory]?"`
+   - Pass `categoryId={activeCategory}` to `CustomSlotsSection` and thread it down to `CreateSlotModal`
+   - In `CustomSlotOnlyView`: change headings to `"Not listed in [Category]?"` for named categories, `"Not finding your category here?"` for Other
+   - In `CustomSlotOnlyView`: move the Create button ABOVE the heading and example cards
+
+### Category-specific slot name examples (NOT existing slot products)
+| Category | Example hints for placeholder |
+|----------|-------------------------------|
+| Electronics & Appliances | Fan, Ceiling Fan, Water Heater, Air Cooler |
+| Vehicles | Auto Rickshaw, Golf Cart, Electric Scooter |
+| Interior Designing | Modular Kitchen, False Ceiling, Wallpaper |
+| Furniture | Bean Bag, Recliner, Shoe Rack, Study Table |
+| Beauty | Hair Straightener, Nail Art Kit, Keratin Treatment |
+| Construction Materials | PVC Pipes, Door Frames, Floor Tiles |
+| Business Services | Logo Design, GST Filing, Social Media Management |
+| Food | Biryani Catering, Tiffin Service, Birthday Cake Delivery |
+| Events & Entertainment | DJ for Wedding, Birthday Decoration, Event Anchor |
+| Pets & Animals | Rabbit, Hamster, Parrot, Fish Tank Setup |
+| Sports & Recreation | Badminton Court Booking, Yoga Classes, Swimming Coach |
+| Marketing | YouTube Channel Promotion, Reel Creator, Brand Ambassador |
+| Real Estate | Warehouse Space, Shop on Rent, Agricultural Land |
+| Gym | CrossFit Studio, Zumba Classes, Yoga Studio |
+| Courses | IELTS Preparation, Graphic Design Course, Digital Marketing |
+| Medical | Physiotherapy, Dental Checkup, Eye Test |
+| Agriculture | Drip Irrigation Setup, Organic Fertilizer, Crop Insurance |
+| Purchase Machinery | Lathe Machine, Hydraulic Press, 3D Printer |
+| Other | Astrology, Handicrafts, Vintage Furniture, Calligraphy |
