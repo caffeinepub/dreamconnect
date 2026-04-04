@@ -52,9 +52,8 @@ export function useActor() {
     }
   }, [actorQuery.data, queryClient]);
 
-  // isReady is true once the actor has been successfully fetched at least once.
-  // It stays true even during background refetches, so buttons never go back
-  // to "Connecting..." after the initial load.
+  // isReady is true once the actor has been successfully fetched at least once
+  // It does NOT flip back to false during background refetches
   const isReady = actorQuery.isSuccess && !!actorQuery.data;
 
   return {
