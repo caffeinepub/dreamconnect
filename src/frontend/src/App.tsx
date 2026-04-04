@@ -17,6 +17,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   Armchair,
   Bike,
   BookOpen,
@@ -402,13 +403,63 @@ function generateMonthTabsHome(count = 12) {
 }
 const HOME_MONTH_TABS = generateMonthTabsHome(12);
 
-function getMemberMonthHome(_r: { location: string; product: string }): {
+function getMemberMonthHome(r: {
+  location: string;
+  product: string;
+  requirements?: string;
+}): {
   year: number;
   month: number;
 } {
-  // For public registrations we only have product + location, no timestamp or requirements
-  // Default to current month as baseline for public registration counts
   const now = new Date();
+  const req = r.requirements || "";
+
+  // Try to parse [Month: YYYY-MM] tag first (most reliable)
+  const monthMatch = req.match(/\[Month:\s*(\d{4})-(\d{2})\]/);
+  if (monthMatch) {
+    return {
+      year: Number.parseInt(monthMatch[1]),
+      month: Number.parseInt(monthMatch[2]) - 1,
+    };
+  }
+
+  // Parse [Expected by: DD MMM YYYY]
+  const dateMatch = req.match(/\[Expected by:\s*(\d{2})\s+(\w+)\s+(\d{4})\]/);
+  if (dateMatch) {
+    const d = new Date();
+    if (!Number.isNaN(d.getTime()))
+      return { year: d.getFullYear(), month: d.getMonth() };
+  }
+
+  // Parse [Timeline: ...] flexible options
+  const tlMatch = req.match(/\[Timeline:\s*([^\]]+)\]/);
+  if (tlMatch) {
+    const tl = tlMatch[1].trim().toLowerCase();
+    if (tl.includes("week") || tl.includes("this month"))
+      return { year: now.getFullYear(), month: now.getMonth() };
+    if (tl.includes("next month") || tl === "within 1 month") {
+      const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
+    if (
+      tl.includes("3 month") ||
+      tl.includes("2-3 month") ||
+      tl.includes("2 month")
+    ) {
+      const d = new Date(now.getFullYear(), now.getMonth() + 3, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
+    if (tl.includes("6 month")) {
+      const d = new Date(now.getFullYear(), now.getMonth() + 6, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
+    if (tl.includes("year")) {
+      const d = new Date(now.getFullYear(), now.getMonth() + 12, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
+  }
+
+  // Default to current month
   return { year: now.getFullYear(), month: now.getMonth() };
 }
 
@@ -778,12 +829,53 @@ function RegistrationModal({
   const register = useRegisterForProduct();
 
   const doRegister = async () => {
+    // Compute which month this registration belongs to
+    const now = new Date();
+    let purchaseYear = selectedMonth?.year ?? now.getFullYear();
+    let purchaseMonth = selectedMonth
+      ? selectedMonth.month + 1
+      : now.getMonth() + 1;
+    if (dateMode === "flexible") {
+      const tl = flexibleTimeline.toLowerCase();
+      if (tl.includes("week") || tl.includes("this month")) {
+        purchaseYear = now.getFullYear();
+        purchaseMonth = now.getMonth() + 1;
+      } else if (tl.includes("next month") || tl === "within 1 month") {
+        const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        purchaseYear = d.getFullYear();
+        purchaseMonth = d.getMonth() + 1;
+      } else if (
+        tl.includes("3 month") ||
+        tl.includes("2-3 month") ||
+        tl.includes("2 month")
+      ) {
+        const d = new Date(now.getFullYear(), now.getMonth() + 3, 1);
+        purchaseYear = d.getFullYear();
+        purchaseMonth = d.getMonth() + 1;
+      } else if (tl.includes("6 month")) {
+        const d = new Date(now.getFullYear(), now.getMonth() + 6, 1);
+        purchaseYear = d.getFullYear();
+        purchaseMonth = d.getMonth() + 1;
+      } else if (tl.includes("year")) {
+        const d = new Date(now.getFullYear(), now.getMonth() + 12, 1);
+        purchaseYear = d.getFullYear();
+        purchaseMonth = d.getMonth() + 1;
+      }
+    } else if (dateMode === "specific" && requirementDate) {
+      const d = new Date(requirementDate);
+      if (!Number.isNaN(d.getTime())) {
+        purchaseYear = d.getFullYear();
+        purchaseMonth = d.getMonth() + 1;
+      }
+    }
+    const monthTag = `[Month: ${purchaseYear}-${String(purchaseMonth).padStart(2, "0")}]`;
+
     const fullRequirements =
       dateMode === "flexible"
-        ? `${requirements} [Timeline: ${flexibleTimeline}]`
+        ? `${requirements} [Timeline: ${flexibleTimeline}] ${monthTag}`
         : requirementDate
-          ? `${requirements} [Expected by: ${new Date(requirementDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}]`
-          : requirements;
+          ? `${requirements} [Expected by: ${new Date(requirementDate).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}] ${monthTag}`
+          : `${requirements} ${monthTag}`;
     try {
       await register.mutateAsync({
         category,
@@ -2061,6 +2153,31 @@ function MyRegistrationsPage() {
     });
   };
 
+  // Helper to check if a registration's purchase month is in the past
+  const isExpired = (reg: Registration) => {
+    const { year, month } = getMemberMonthHome({
+      product: reg.product,
+      location: reg.location,
+      requirements: reg.requirements,
+    });
+    const now = new Date();
+    const regDate = new Date(year, month, 1);
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    return regDate < currentMonthStart;
+  };
+
+  const getNextMonthLabel = () => {
+    const now = new Date();
+    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    return next.toLocaleDateString("en-IN", {
+      month: "short",
+      year: "numeric",
+    });
+  };
+
+  const expiredRegs = registrations.filter(isExpired);
+  const activeRegs = registrations.filter((r) => !isExpired(r));
+
   return (
     <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-6">
@@ -2095,50 +2212,152 @@ function MyRegistrationsPage() {
           </p>
         </div>
       ) : (
-        <div className="space-y-3" data-ocid="my_registrations.table">
-          {registrations.map((reg, idx) => {
-            const cat = CATEGORIES.find((c) => c.id === reg.category);
-            const Icon = cat?.icon ?? Monitor;
-            return (
-              <motion.div
-                key={String(reg.id)}
-                data-ocid={`my_registrations.item.${idx + 1}`}
-                className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-3"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: idx * 0.04 }}
-              >
-                <div
-                  className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
-                  style={{ background: `${cat?.color}20` }}
-                >
-                  <Icon size={18} style={{ color: cat?.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-display font-bold text-foreground">
-                      {reg.product}
-                    </span>
-                    <span
-                      className="text-xs px-2 py-0.5 rounded-full font-medium"
-                      style={{
-                        background: `${cat?.color}20`,
-                        color: cat?.color,
-                      }}
+        <div className="space-y-4">
+          {/* Expired registrations with nudge */}
+          {expiredRegs.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+                <AlertTriangle size={12} />
+                Expired Slots ({expiredRegs.length})
+              </p>
+              {expiredRegs.map((reg, idx) => {
+                const cat = CATEGORIES.find((c) => c.id === reg.category);
+                const Icon = cat?.icon ?? Monitor;
+                return (
+                  <motion.div
+                    key={String(reg.id)}
+                    data-ocid={`my_registrations.item.${idx + 1}`}
+                    className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-4"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.04 }}
+                  >
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div
+                        className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
+                        style={{ background: `${cat?.color}20` }}
+                      >
+                        <Icon size={18} style={{ color: cat?.color }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-display font-bold text-foreground">
+                            {reg.product}
+                          </span>
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full font-medium"
+                            style={{
+                              background: `${cat?.color}20`,
+                              color: cat?.color,
+                            }}
+                          >
+                            {reg.category}
+                          </span>
+                          <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400">
+                            ⏰ Expired
+                          </span>
+                        </div>
+                        <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                          {reg.location}
+                        </p>
+                      </div>
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDate(reg.timestamp)}
+                      </div>
+                    </div>
+                    {/* Nudge banner */}
+                    <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 px-3 py-2.5">
+                      <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-2">
+                        Your slot has expired. Update your timeline?
+                      </p>
+                      <div className="flex gap-2 flex-wrap">
+                        <Button
+                          data-ocid={`my_registrations.move_button.${idx + 1}`}
+                          size="sm"
+                          variant="outline"
+                          className="text-xs h-7 border-amber-400 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-600"
+                          onClick={() => {
+                            toast.info(
+                              `Please re-register for ${getNextMonthLabel()} to update your timeline for ${reg.product}.`,
+                            );
+                          }}
+                        >
+                          Move to {getNextMonthLabel()}
+                        </Button>
+                        <Button
+                          data-ocid={`my_registrations.remove_button.${idx + 1}`}
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs h-7 text-muted-foreground hover:text-destructive"
+                          onClick={() => {
+                            toast.info(
+                              "To remove this registration, please contact support or re-register with an updated timeline.",
+                            );
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Active registrations */}
+          {activeRegs.length > 0 && (
+            <div className="space-y-3" data-ocid="my_registrations.table">
+              {expiredRegs.length > 0 && (
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                  Active ({activeRegs.length})
+                </p>
+              )}
+              {activeRegs.map((reg, idx) => {
+                const cat = CATEGORIES.find((c) => c.id === reg.category);
+                const Icon = cat?.icon ?? Monitor;
+                return (
+                  <motion.div
+                    key={String(reg.id)}
+                    data-ocid={`my_registrations.item.${expiredRegs.length + idx + 1}`}
+                    className="rounded-xl border border-border bg-card p-4 flex flex-col sm:flex-row sm:items-center gap-3"
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.04 }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
+                      style={{ background: `${cat?.color}20` }}
                     >
-                      {reg.category}
-                    </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-0.5 truncate">
-                    {reg.location}
-                  </p>
-                </div>
-                <div className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatDate(reg.timestamp)}
-                </div>
-              </motion.div>
-            );
-          })}
+                      <Icon size={18} style={{ color: cat?.color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-display font-bold text-foreground">
+                          {reg.product}
+                        </span>
+                        <span
+                          className="text-xs px-2 py-0.5 rounded-full font-medium"
+                          style={{
+                            background: `${cat?.color}20`,
+                            color: cat?.color,
+                          }}
+                        >
+                          {reg.category}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-0.5 truncate">
+                        {reg.location}
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatDate(reg.timestamp)}
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
     </main>

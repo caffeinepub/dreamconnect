@@ -450,6 +450,7 @@ export interface CustomSlotMember {
 export interface PublicRegistration {
   product: string;
   location: string;
+  requirements?: string;
 }
 
 export function useCustomSlots() {

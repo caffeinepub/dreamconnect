@@ -84,6 +84,7 @@ actor {
   public type PublicRegistration = {
     product : Text;
     location : Text;
+    requirements : Text;
   };
 
   // ── Stable storage (survives upgrades / redeployments) ──────────────────────────────────────────────
@@ -330,7 +331,7 @@ actor {
   public query func getPublicRegistrationsForCategory(category : Text) : async [PublicRegistration] {
     let filtered = registrations.filter(func(r) { r.category == category });
     let mapped = List.empty<PublicRegistration>();
-    for (r in filtered.values()) { mapped.add({ product = r.product; location = r.location }) };
+    for (r in filtered.values()) { mapped.add({ product = r.product; location = r.location; requirements = r.requirements }) };
     mapped.toArray();
   };
 

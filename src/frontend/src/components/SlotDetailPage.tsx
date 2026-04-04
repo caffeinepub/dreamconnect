@@ -138,45 +138,51 @@ function getMemberMonth(
   timestamp: bigint,
 ): { year: number; month: number } {
   const now = new Date();
-  const req = (requirements || "").toLowerCase();
+  const req = requirements || "";
 
-  // Keyword mappings
-  if (
-    req.includes("within 1 week") ||
-    req.includes("within this month") ||
-    req.includes("this month") ||
-    req.includes("within 2 weeks") ||
-    req.includes("within a week")
-  ) {
-    return { year: now.getFullYear(), month: now.getMonth() };
+  // Parse [Month: YYYY-MM] tag first (most reliable, set at registration time)
+  const monthMatch = req.match(/\[Month:\s*(\d{4})-(\d{2})\]/);
+  if (monthMatch) {
+    return {
+      year: Number.parseInt(monthMatch[1]),
+      month: Number.parseInt(monthMatch[2]) - 1,
+    };
   }
-  if (req.includes("next month")) {
-    const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    return { year: d.getFullYear(), month: d.getMonth() };
+
+  // Parse [Expected by: DD MMM YYYY]
+  const dateMatch = req.match(/\[Expected by:\s*(\d{2})\s+(\w+)\s+(\d{4})\]/);
+  if (dateMatch) {
+    const d = new Date(`${dateMatch[1]} ${dateMatch[2]} ${dateMatch[3]}`);
+    if (!Number.isNaN(d.getTime()))
+      return { year: d.getFullYear(), month: d.getMonth() };
   }
-  if (
-    req.includes("within 3 months") ||
-    req.includes("within 2-3 months") ||
-    req.includes("2-3 months") ||
-    req.includes("within 2 months")
-  ) {
-    const d = new Date(now.getFullYear(), now.getMonth() + 2, 1);
-    return { year: d.getFullYear(), month: d.getMonth() };
-  }
-  if (req.includes("within 6 months") || req.includes("6 months")) {
-    const d = new Date(now.getFullYear(), now.getMonth() + 5, 1);
-    return { year: d.getFullYear(), month: d.getMonth() };
-  }
-  if (
-    req.includes("within a year") ||
-    req.includes("within 1 year") ||
-    req.includes("1 year")
-  ) {
-    const d = new Date(now.getFullYear(), now.getMonth() + 11, 1);
-    return { year: d.getFullYear(), month: d.getMonth() };
-  }
-  if (req.includes("within 1 month") || req.includes("this month")) {
-    return { year: now.getFullYear(), month: now.getMonth() };
+
+  // Parse [Timeline: ...] flexible options
+  const tlMatch = req.match(/\[Timeline:\s*([^\]]+)\]/);
+  if (tlMatch) {
+    const tl = tlMatch[1].trim().toLowerCase();
+    if (tl.includes("week") || tl.includes("this month"))
+      return { year: now.getFullYear(), month: now.getMonth() };
+    if (tl.includes("next month") || tl === "within 1 month") {
+      const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
+    if (
+      tl.includes("3 month") ||
+      tl.includes("2-3 month") ||
+      tl.includes("2 month")
+    ) {
+      const d = new Date(now.getFullYear(), now.getMonth() + 3, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
+    if (tl.includes("6 month")) {
+      const d = new Date(now.getFullYear(), now.getMonth() + 6, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
+    if (tl.includes("year")) {
+      const d = new Date(now.getFullYear(), now.getMonth() + 12, 1);
+      return { year: d.getFullYear(), month: d.getMonth() };
+    }
   }
 
   // Fall back to timestamp month
@@ -280,7 +286,8 @@ export function SlotDetailPage({
               </span>
             </div>
             <p className="text-sm text-muted-foreground mt-0.5">
-              {members.length} members · {quotes.length} offers available
+              👥 {members.length} customers · 📋 {quotes.length} service
+              providers
             </p>
           </div>
 
@@ -362,7 +369,7 @@ export function SlotDetailPage({
                 <Users size={16} className="text-primary" />
               </div>
               <h2 className="font-display text-xl font-bold text-foreground">
-                Slot Members
+                👥 Customers
               </h2>
               <span className="ml-auto text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full font-medium">
                 {filteredMembers.length} in {monthTabs[activeMonthIdx].label}
@@ -457,7 +464,7 @@ export function SlotDetailPage({
                 <Tag size={16} className="text-accent-foreground" />
               </div>
               <h2 className="font-display text-xl font-bold text-foreground">
-                Service Provider Offers
+                📋 Service Providers
               </h2>
               <span className="ml-auto text-xs text-muted-foreground bg-muted px-2.5 py-1 rounded-full font-medium">
                 {quotes.length} offers
