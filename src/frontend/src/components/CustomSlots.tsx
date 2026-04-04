@@ -366,6 +366,8 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
         creatorRequirements: creatorRequirements.trim(),
       });
       await queryClient.refetchQueries({ queryKey: ["customSlots"] });
+      queryClient.invalidateQueries({ queryKey: ["customSlotMemberCount"] });
+      queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
       toast.success(
         "Community slot created! You've been added as the first member.",
       );

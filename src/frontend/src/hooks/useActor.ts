@@ -55,7 +55,6 @@ export function useActor() {
   return {
     actor: actorQuery.data || null,
     isFetching: actorQuery.isFetching,
-    // isReady stays true once the first fetch completes (even during background refetches)
-    isReady: actorQuery.isSuccess || actorQuery.isFetched,
+    isReady: !!actorQuery.data && !actorQuery.isLoading,
   };
 }

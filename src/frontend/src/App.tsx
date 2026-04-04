@@ -63,7 +63,7 @@ import {
   Zap,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useInternetIdentity } from "./hooks/useInternetIdentity";
 import {
@@ -426,7 +426,7 @@ function getMemberMonthHome(r: {
   // Parse [Expected by: DD MMM YYYY]
   const dateMatch = req.match(/\[Expected by:\s*(\d{2})\s+(\w+)\s+(\d{4})\]/);
   if (dateMatch) {
-    const d = new Date();
+    const d = new Date(`${dateMatch[2]} ${dateMatch[1]} ${dateMatch[3]}`);
     if (!Number.isNaN(d.getTime()))
       return { year: d.getFullYear(), month: d.getMonth() };
   }
@@ -1679,6 +1679,21 @@ function HomePage({
   const { data: publicRegs = [] } =
     usePublicRegistrationsForCategory(activeCategory);
 
+  // Month-filtered counts: count members per product for the active month tab only
+  const activeMonthTab = HOME_MONTH_TABS[activeHomeMonthIdx];
+  const monthFilteredCounts = useMemo(() => {
+    const result: Record<string, number> = {};
+    if (!activeMonthTab) return result;
+    const filtered = publicRegs.filter((r: PublicRegistration) => {
+      const m = getMemberMonthHome(r);
+      return m.year === activeMonthTab.year && m.month === activeMonthTab.month;
+    });
+    for (const r of filtered) {
+      result[r.product] = (result[r.product] ?? 0) + 1;
+    }
+    return result;
+  }, [publicRegs, activeMonthTab]);
+
   // Location-based filtering
   const locationLevel = LOCATION_LEVELS[activeCategory] ?? "city";
   const locationFilteredProducts =
@@ -1689,7 +1704,7 @@ function HomePage({
               (r: PublicRegistration) =>
                 r.product === product &&
                 matchesLocation(r.location, selectedLocation, locationLevel),
-            ) || (counts[product] ?? 0) === 0, // show empty slots too as "Be the first"
+            ) || (monthFilteredCounts[product] ?? 0) === 0, // show empty slots too as "Be the first"
         )
       : displayProducts;
 
@@ -2026,7 +2041,7 @@ function HomePage({
                       key={product}
                       product={product}
                       category={activeCategory}
-                      count={counts[product] ?? 0}
+                      count={monthFilteredCounts[product] ?? 0}
                       index={i + 1}
                       onRegister={() =>
                         setSelectedProduct(resolveSlotProduct(product))
@@ -2050,7 +2065,7 @@ function HomePage({
               key={product}
               product={product}
               category={activeCategory}
-              count={counts[product] ?? 0}
+              count={monthFilteredCounts[product] ?? 0}
               index={i + 1}
               onRegister={() => setSelectedProduct(resolveSlotProduct(product))}
               onViewSlot={() =>

@@ -454,14 +454,14 @@ export interface PublicRegistration {
 }
 
 export function useCustomSlots() {
-  const { actor, isFetching } = useActor();
+  const { actor } = useActor();
   return useQuery<CustomSlot[]>({
     queryKey: ["customSlots"],
     queryFn: async () => {
       if (!actor) return [];
       return (actor as any).getCustomSlots();
     },
-    enabled: !!actor && !isFetching,
+    enabled: !!actor,
     refetchInterval: 15000,
   });
 }
@@ -499,6 +499,7 @@ export function useCreateCustomSlot() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customSlots"] });
       queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
+      queryClient.invalidateQueries({ queryKey: ["customSlotMemberCount"] });
       queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
     },
   });
@@ -564,14 +565,14 @@ export function useCustomSlotMembers(slotId: bigint | null) {
 }
 
 export function useIsCustomSlotMember(slotId: bigint | null) {
-  const { actor, isFetching } = useActor();
+  const { actor } = useActor();
   return useQuery<boolean>({
     queryKey: ["isCustomSlotMember", slotId?.toString()],
     queryFn: async () => {
       if (!actor || slotId === null) return false;
       return (actor as any).isCustomSlotMember(slotId);
     },
-    enabled: !!actor && !isFetching && slotId !== null,
+    enabled: !!actor && slotId !== null,
   });
 }
 
