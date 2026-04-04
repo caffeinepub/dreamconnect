@@ -31,6 +31,7 @@ interface SlotDetailPageProps {
   categoryColor: string;
   onBack: () => void;
   isSlotMember?: boolean;
+  activeMonth?: { year: number; month: number; label: string };
 }
 
 function QuoteCard({
@@ -196,6 +197,7 @@ export function SlotDetailPage({
   categoryColor,
   onBack,
   isSlotMember = false,
+  activeMonth,
 }: SlotDetailPageProps) {
   const [openChats, setOpenChats] = useState<OpenChat[]>([]);
   const { data: members = [], isLoading: membersLoading } = useSlotMembers(
@@ -209,7 +211,14 @@ export function SlotDetailPage({
 
   // Month tabs
   const monthTabs = useMemo(() => generateMonthTabs(6), []);
-  const [activeMonthIdx, setActiveMonthIdx] = useState(0); // default = current month
+  const [activeMonthIdx, setActiveMonthIdx] = useState(() => {
+    if (!activeMonth) return 0;
+    const tabs = generateMonthTabs(6);
+    const idx = tabs.findIndex(
+      (t) => t.year === activeMonth.year && t.month === activeMonth.month,
+    );
+    return idx >= 0 ? idx : 0;
+  });
 
   // Count members per month tab
   const memberCountsByMonth = useMemo(() => {

@@ -831,18 +831,11 @@ function RegistrationModal({
     // The month bucket is ALWAYS determined by the selected month tab.
     // The flexible timeline option is only stored as descriptive text — it does NOT change the month.
     const now = new Date();
-    let purchaseYear = selectedMonth?.year ?? now.getFullYear();
-    let purchaseMonth = selectedMonth
+    // Month bucket is ALWAYS the selected tab — never overridden by the date picker
+    const purchaseYear = selectedMonth?.year ?? now.getFullYear();
+    const purchaseMonth = selectedMonth
       ? selectedMonth.month + 1
       : now.getMonth() + 1;
-    // Only override with specific date when user explicitly picks a date in specific mode
-    if (dateMode === "specific" && requirementDate) {
-      const d = new Date(requirementDate);
-      if (!Number.isNaN(d.getTime())) {
-        purchaseYear = d.getFullYear();
-        purchaseMonth = d.getMonth() + 1;
-      }
-    }
     const monthTag = `[Month: ${purchaseYear}-${String(purchaseMonth).padStart(2, "0")}]`;
 
     const fullRequirements =
@@ -1740,6 +1733,7 @@ function HomePage({
         categoryColor={cat?.color ?? "oklch(0.6 0.2 230)"}
         onBack={() => setViewSlot(null)}
         isSlotMember={isSlotMember}
+        activeMonth={HOME_MONTH_TABS[activeHomeMonthIdx]}
       />
     );
   }
