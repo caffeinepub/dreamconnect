@@ -16,6 +16,7 @@ import {
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
   useCreateCustomSlot,
   useCustomSlotMemberCount,
@@ -25,6 +26,15 @@ import {
   useJoinCustomSlot,
 } from "../hooks/useQueries";
 import type { CustomSlot, CustomSlotMember } from "../hooks/useQueries";
+
+// Helper: parse [Month: YYYY-MM] from a requirements string
+function parseMonthFromReqs(
+  req: string,
+): { year: number; month: number } | null {
+  const m = req.match(/\[Month:\s*(\d{4})-(\d{2})\]/);
+  if (!m) return null;
+  return { year: Number.parseInt(m[1], 10), month: Number.parseInt(m[2], 10) };
+}
 
 const SLOT_CATEGORIES = [
   "Electronics & Appliances",
@@ -112,6 +122,7 @@ interface CustomSlotCardProps {
   slot: CustomSlot;
   index: number;
   memberCount: number;
+  monthFilteredCount?: number;
   isMember: boolean;
   onJoin: () => void;
   onViewMembers: () => void;
@@ -121,16 +132,18 @@ function CustomSlotCard({
   slot,
   index,
   memberCount,
+  monthFilteredCount,
   isMember,
   onJoin,
   onViewMembers,
 }: CustomSlotCardProps) {
+  const displayCount = monthFilteredCount ?? memberCount;
   const color = getCategoryColor(slot.category);
   const isFull = memberCount >= Number(slot.maxMembers);
   const pct = Math.min(
     100,
     Number(slot.maxMembers) > 0
-      ? (memberCount / Number(slot.maxMembers)) * 100
+      ? (displayCount / Number(slot.maxMembers)) * 100
       : 0,
   );
   const barColor =
@@ -188,7 +201,7 @@ function CustomSlotCard({
       </div>
 
       {/* Member avatars */}
-      {memberCount > 0 && (
+      {displayCount > 0 && (
         <div className="flex items-center gap-2 mb-1">
           <div className="flex items-center">
             {(
@@ -196,22 +209,22 @@ function CustomSlotCard({
                 {
                   key: "av-1",
                   color: "oklch(0.6 0.18 200)",
-                  show: memberCount >= 1,
+                  show: displayCount >= 1,
                 },
                 {
                   key: "av-2",
                   color: "oklch(0.6 0.18 290)",
-                  show: memberCount >= 2,
+                  show: displayCount >= 2,
                 },
                 {
                   key: "av-3",
                   color: "oklch(0.7 0.18 60)",
-                  show: memberCount >= 3,
+                  show: displayCount >= 3,
                 },
                 {
                   key: "av-4",
                   color: "oklch(0.6 0.18 145)",
-                  show: memberCount >= 4,
+                  show: displayCount >= 4,
                 },
               ] as { key: string; color: string; show: boolean }[]
             )
@@ -245,9 +258,9 @@ function CustomSlotCard({
                 </div>
               ))}
           </div>
-          {memberCount > 4 && (
+          {displayCount > 4 && (
             <span style={{ fontSize: 12, color: "oklch(0.65 0.05 258)" }}>
-              +{memberCount - 4} more
+              +{displayCount - 4} more
             </span>
           )}
         </div>
@@ -259,7 +272,15 @@ function CustomSlotCard({
           className="flex justify-between text-xs mb-1"
           style={{ color: "oklch(0.65 0.05 258)" }}
         >
-          <span>{memberCount} members joined</span>
+          <span>
+            {displayCount} members
+            {monthFilteredCount !== undefined &&
+            monthFilteredCount !== memberCount ? (
+              <span className="text-muted-foreground ml-1">
+                ({memberCount} total)
+              </span>
+            ) : null}
+          </span>
           <span>{Number(slot.maxMembers)} max</span>
         </div>
         <div
@@ -810,7 +831,11 @@ interface CustomSlotMembersPageProps {
 }
 
 function CustomSlotMembersPage({ slot, onBack }: CustomSlotMembersPageProps) {
-  const { data: members = [], isLoading } = useCustomSlotMembers(slot.id);
+  const { identity } = useInternetIdentity();
+  const isAuthenticated = !!identity;
+  const { data: members = [], isLoading } = useCustomSlotMembers(
+    isAuthenticated ? slot.id : null,
+  );
   const color = getCategoryColor(slot.category);
 
   return (
@@ -863,17 +888,34 @@ function CustomSlotMembersPage({ slot, onBack }: CustomSlotMembersPageProps) {
           </span>
           <span className="flex items-center gap-1">
             <Users size={11} />
-            {members.length} / {Number(slot.maxMembers)} members
+            {isAuthenticated
+              ? `${members.length} / ${Number(slot.maxMembers)} members`
+              : `? / ${Number(slot.maxMembers)} members`}
           </span>
         </div>
       </div>
 
       {/* Members list */}
       <h2 className="font-display text-lg font-bold text-foreground mb-4">
-        Members ({members.length})
+        Members {isAuthenticated ? `(${members.length})` : ""}
       </h2>
 
-      {isLoading ? (
+      {!isAuthenticated ? (
+        <div
+          data-ocid="slot_members.signin_required"
+          className="flex flex-col items-center justify-center py-16 text-center rounded-2xl border border-dashed border-border"
+        >
+          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-3">
+            <Lock size={24} className="text-primary" />
+          </div>
+          <p className="font-display text-lg font-bold text-foreground mb-1">
+            Sign in to view members
+          </p>
+          <p className="text-sm text-muted-foreground">
+            You need to be signed in to see who joined this slot.
+          </p>
+        </div>
+      ) : isLoading ? (
         <div data-ocid="slot_members.loading_state" className="space-y-3">
           {[0, 1, 2].map((i) => (
             <Skeleton key={i} className="h-24 rounded-xl" />
@@ -933,6 +975,7 @@ interface SlotCardWrapperProps {
   slot: CustomSlot;
   index: number;
   isAuthenticated: boolean;
+  activeMonth?: { year: number; month: number; label: string };
   onJoin: (slot: CustomSlot) => void;
   onViewMembers: (slot: CustomSlot) => void;
   onAuthRequired: () => void;
@@ -942,6 +985,7 @@ function SlotCardWrapper({
   slot,
   index,
   isAuthenticated,
+  activeMonth,
   onJoin,
   onViewMembers,
   onAuthRequired,
@@ -950,12 +994,29 @@ function SlotCardWrapper({
     isAuthenticated ? slot.id : null,
   );
   const { data: memberCount = 0 } = useCustomSlotMemberCount(slot.id);
+  const { data: members } = useCustomSlotMembers(
+    isAuthenticated && activeMonth ? slot.id : null,
+  );
+
+  // Compute month-filtered count only when authenticated and activeMonth is provided
+  const monthFilteredCount =
+    isAuthenticated && activeMonth && members
+      ? members.filter((m) => {
+          const parsed = parseMonthFromReqs(m.requirements);
+          if (!parsed) return false;
+          return (
+            parsed.year === activeMonth.year &&
+            parsed.month === activeMonth.month
+          );
+        }).length
+      : undefined;
 
   return (
     <CustomSlotCard
       slot={slot}
       index={index}
       memberCount={memberCount}
+      monthFilteredCount={monthFilteredCount}
       isMember={isMember}
       onJoin={() => {
         if (!isAuthenticated) {
@@ -976,6 +1037,7 @@ export interface CustomSlotsSectionProps {
   externalCreateOpen?: boolean;
   onExternalCreateClose?: () => void;
   categoryId?: string;
+  activeMonth?: { year: number; month: number; label: string };
 }
 
 export function CustomSlotsSection({
@@ -984,6 +1046,7 @@ export function CustomSlotsSection({
   externalCreateOpen = false,
   onExternalCreateClose,
   categoryId,
+  activeMonth,
 }: CustomSlotsSectionProps) {
   const { data: slots = [], isLoading } = useCustomSlots();
   const [categoryFilter, setCategoryFilter] = useState("All");
@@ -1109,6 +1172,7 @@ export function CustomSlotsSection({
               slot={slot}
               index={i + 1}
               isAuthenticated={isAuthenticated}
+              activeMonth={activeMonth}
               onJoin={setJoiningSlot}
               onViewMembers={setViewingSlot}
               onAuthRequired={onAuthRequired}

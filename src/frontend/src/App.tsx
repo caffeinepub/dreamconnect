@@ -1146,6 +1146,7 @@ interface CustomSlotOnlyViewProps {
   onAuthRequired: () => void;
   externalCreateOpen: boolean;
   setExternalCreateOpen: (open: boolean) => void;
+  activeMonth?: { year: number; month: number; label: string };
 }
 
 function CustomSlotOnlyView({
@@ -1154,6 +1155,7 @@ function CustomSlotOnlyView({
   onAuthRequired,
   externalCreateOpen,
   setExternalCreateOpen,
+  activeMonth,
 }: CustomSlotOnlyViewProps) {
   const catInfo = CATEGORIES.find((c) => c.id === activeCategory);
   const CatIcon = catInfo?.icon ?? FlameKindling;
@@ -1339,6 +1341,7 @@ function CustomSlotOnlyView({
           externalCreateOpen={externalCreateOpen}
           onExternalCreateClose={() => setExternalCreateOpen(false)}
           categoryId={activeCategory}
+          activeMonth={activeMonth}
         />
       </div>
     </motion.div>
@@ -1943,6 +1946,7 @@ function HomePage({
           onAuthRequired={onAuthRequired}
           externalCreateOpen={externalCreateOpen}
           setExternalCreateOpen={setExternalCreateOpen}
+          activeMonth={HOME_MONTH_TABS[activeHomeMonthIdx]}
         />
       ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
@@ -2063,6 +2067,7 @@ function HomePage({
             externalCreateOpen={externalCreateOpen}
             onExternalCreateClose={() => setExternalCreateOpen(false)}
             categoryId={activeCategory}
+            activeMonth={HOME_MONTH_TABS[activeHomeMonthIdx]}
           />
         </div>
       )}

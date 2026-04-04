@@ -552,15 +552,16 @@ export function useCustomSlotMemberCount(slotId: bigint | null) {
 }
 
 export function useCustomSlotMembers(slotId: bigint | null) {
-  const { actor, isFetching } = useActor();
+  const { actor, isReady: actorIsReady } = useActor();
   return useQuery<CustomSlotMember[]>({
     queryKey: ["customSlotMembers", slotId?.toString()],
     queryFn: async () => {
       if (!actor || slotId === null) return [];
       return (actor as any).getCustomSlotMembers(slotId);
     },
-    enabled: !!actor && !isFetching && slotId !== null,
+    enabled: !!actor && actorIsReady && slotId !== null,
     refetchInterval: 15000,
+    refetchOnMount: true,
   });
 }
 
