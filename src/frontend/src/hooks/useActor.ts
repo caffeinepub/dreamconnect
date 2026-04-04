@@ -52,9 +52,9 @@ export function useActor() {
     }
   }, [actorQuery.data, queryClient]);
 
-  // isReady is true once the actor has been fetched at least once successfully
-  // It stays true even during background refetches (unlike isFetching which toggles)
-  const isReady = actorQuery.isSuccess && !!actorQuery.data;
+  // isReady: true when we have a fully authenticated actor (not anonymous)
+  // This is the key flag used by Register and Create Custom Slot buttons
+  const isReady = !!identity && !!actorQuery.data && !actorQuery.isFetching;
 
   return {
     actor: actorQuery.data || null,
