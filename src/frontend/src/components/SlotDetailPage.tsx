@@ -118,7 +118,7 @@ function QuoteCard({
 }
 
 // Generate array of month labels from current month, going N months ahead
-function generateMonthTabs(count = 12) {
+function generateMonthTabs(count = 6) {
   const now = new Date();
   const tabs: { label: string; year: number; month: number }[] = [];
   for (let i = 0; i < count; i++) {
@@ -208,7 +208,7 @@ export function SlotDetailPage({
   );
 
   // Month tabs
-  const monthTabs = useMemo(() => generateMonthTabs(12), []);
+  const monthTabs = useMemo(() => generateMonthTabs(6), []);
   const [activeMonthIdx, setActiveMonthIdx] = useState(0); // default = current month
 
   // Count members per month tab

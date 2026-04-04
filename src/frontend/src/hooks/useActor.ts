@@ -52,7 +52,8 @@ export function useActor() {
     }
   }, [actorQuery.data, queryClient]);
 
-  // isReady: true once the actor has been fetched at least once (not just fetching)
+  // isReady is true once the actor has been fetched at least once successfully
+  // It stays true even during background refetches (unlike isFetching which toggles)
   const isReady = actorQuery.isSuccess && !!actorQuery.data;
 
   return {

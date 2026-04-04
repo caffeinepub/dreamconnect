@@ -388,7 +388,7 @@ function getBarColor(count: number): string {
 }
 
 // ===== MONTH TIMELINE HELPERS =====
-function generateMonthTabsHome(count = 12) {
+function generateMonthTabsHome(count = 6) {
   const now = new Date();
   const tabs: { label: string; year: number; month: number }[] = [];
   for (let i = 0; i < count; i++) {
@@ -401,7 +401,7 @@ function generateMonthTabsHome(count = 12) {
   }
   return tabs;
 }
-const HOME_MONTH_TABS = generateMonthTabsHome(12);
+const HOME_MONTH_TABS = generateMonthTabsHome(6);
 
 function getMemberMonthHome(r: {
   location: string;
