@@ -52,10 +52,12 @@ export function useActor() {
     }
   }, [actorQuery.data, queryClient]);
 
+  // isReady: true once the actor has been fetched at least once (not just fetching)
+  const isReady = actorQuery.isSuccess && !!actorQuery.data;
+
   return {
     actor: actorQuery.data || null,
     isFetching: actorQuery.isFetching,
-    // isReady: true once the first successful fetch completes (stays true, never flips back)
-    isReady: actorQuery.isSuccess,
+    isReady,
   };
 }
