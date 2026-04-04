@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import type { backendInterface } from "../backend";
 import { createActorWithConfig } from "../config";
 import { getSecretParameter } from "../utils/urlParams";
@@ -9,9 +9,6 @@ const ACTOR_QUERY_KEY = "actor";
 export function useActor() {
   const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
-  // Track whether we've had at least one successful fetch
-  const hasSucceededOnce = useRef(false);
-
   const actorQuery = useQuery<backendInterface>({
     queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
     queryFn: async () => {
@@ -39,11 +36,6 @@ export function useActor() {
     enabled: true,
   });
 
-  // Track first successful completion
-  if (actorQuery.isSuccess) {
-    hasSucceededOnce.current = true;
-  }
-
   // When the actor changes, invalidate dependent queries
   useEffect(() => {
     if (actorQuery.data) {
@@ -60,9 +52,9 @@ export function useActor() {
     }
   }, [actorQuery.data, queryClient]);
 
-  // isReady = true once the actor has been fetched at least once successfully
-  // This does NOT go back to false during background refetches
-  const isReady = hasSucceededOnce.current || actorQuery.isSuccess;
+  // isReady is true once the actor has been successfully fetched at least once.
+  // It does NOT go back to false during background refetches (unlike isFetching).
+  const isReady = actorQuery.isSuccess && !!actorQuery.data;
 
   return {
     actor: actorQuery.data || null,
