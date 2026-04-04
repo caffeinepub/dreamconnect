@@ -774,12 +774,10 @@ function getDefaultDateMode(category: string): "specific" | "flexible" {
   return SPECIFIC_DATE_CATEGORIES.has(category) ? "specific" : "flexible";
 }
 
-function getDefaultFlexibleTimeline(monthIdx: number): string {
-  if (monthIdx <= 0) return "Within this month";
-  if (monthIdx === 1) return "Next month";
-  if (monthIdx <= 3) return "Within 3 months";
-  if (monthIdx <= 6) return "Within 6 months";
-  return "Within a year";
+function getDefaultFlexibleTimeline(_monthIdx: number): string {
+  // Since the month is already set by the tab, the flexible option
+  // just describes urgency within that month.
+  return "Anytime this month";
 }
 
 function getMonthLastDay(year: number, month: number): string {
@@ -829,39 +827,16 @@ function RegistrationModal({
   const register = useRegisterForProduct();
 
   const doRegister = async () => {
-    // Compute which month this registration belongs to
+    // Compute which month this registration belongs to.
+    // The month bucket is ALWAYS determined by the selected month tab.
+    // The flexible timeline option is only stored as descriptive text — it does NOT change the month.
     const now = new Date();
     let purchaseYear = selectedMonth?.year ?? now.getFullYear();
     let purchaseMonth = selectedMonth
       ? selectedMonth.month + 1
       : now.getMonth() + 1;
-    if (dateMode === "flexible") {
-      const tl = flexibleTimeline.toLowerCase();
-      if (tl.includes("week") || tl.includes("this month")) {
-        purchaseYear = now.getFullYear();
-        purchaseMonth = now.getMonth() + 1;
-      } else if (tl.includes("next month") || tl === "within 1 month") {
-        const d = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        purchaseYear = d.getFullYear();
-        purchaseMonth = d.getMonth() + 1;
-      } else if (
-        tl.includes("3 month") ||
-        tl.includes("2-3 month") ||
-        tl.includes("2 month")
-      ) {
-        const d = new Date(now.getFullYear(), now.getMonth() + 3, 1);
-        purchaseYear = d.getFullYear();
-        purchaseMonth = d.getMonth() + 1;
-      } else if (tl.includes("6 month")) {
-        const d = new Date(now.getFullYear(), now.getMonth() + 6, 1);
-        purchaseYear = d.getFullYear();
-        purchaseMonth = d.getMonth() + 1;
-      } else if (tl.includes("year")) {
-        const d = new Date(now.getFullYear(), now.getMonth() + 12, 1);
-        purchaseYear = d.getFullYear();
-        purchaseMonth = d.getMonth() + 1;
-      }
-    } else if (dateMode === "specific" && requirementDate) {
+    // Only override with specific date when user explicitly picks a date in specific mode
+    if (dateMode === "specific" && requirementDate) {
       const d = new Date(requirementDate);
       if (!Number.isNaN(d.getTime())) {
         purchaseYear = d.getFullYear();
@@ -1104,15 +1079,16 @@ function RegistrationModal({
                     onChange={(e) => setFlexibleTimeline(e.target.value)}
                     className="w-full h-10 px-3 rounded-xl bg-muted border border-border text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
                   >
-                    <option value="Within a week">Within a week</option>
-                    <option value="Within 2 weeks">Within 2 weeks</option>
-                    <option value="Within this month">Within this month</option>
-                    <option value="Next month">Next month</option>
-                    <option value="Within 3 months">Within 3 months</option>
-                    <option value="Within 6 months">Within 6 months</option>
-                    <option value="Within a year">Within a year</option>
-                    <option value="No rush / Flexible">
-                      No rush / Flexible
+                    <option value="Early in the month">
+                      Early in the month
+                    </option>
+                    <option value="Mid month">Mid month</option>
+                    <option value="End of the month">End of the month</option>
+                    <option value="Anytime this month">
+                      Anytime this month
+                    </option>
+                    <option value="Flexible / No rush">
+                      Flexible / No rush
                     </option>
                   </select>
                 )}
