@@ -74,6 +74,7 @@ export const CustomSlotMember = IDL.Record({
 export const PublicRegistration = IDL.Record({
   'product' : IDL.Text,
   'location' : IDL.Text,
+  'requirements' : IDL.Text,
 });
 
 export const idlService = IDL.Service({
@@ -244,6 +245,7 @@ export const idlFactory = ({ IDL }) => {
   const PublicRegistration = IDL.Record({
     'product' : IDL.Text,
     'location' : IDL.Text,
+    'requirements' : IDL.Text,
   });
   
   return IDL.Service({

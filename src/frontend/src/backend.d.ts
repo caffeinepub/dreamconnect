@@ -70,6 +70,7 @@ export interface CustomSlotMember {
 export interface PublicRegistration {
     product: string;
     location: string;
+    requirements: string;
 }
 export enum UserRole {
     admin = "admin",
