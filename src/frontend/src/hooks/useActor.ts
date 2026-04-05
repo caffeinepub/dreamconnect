@@ -52,9 +52,9 @@ export function useActor() {
     }
   }, [actorQuery.data, queryClient]);
 
-  // isReady is true once the actor has been successfully fetched at least once.
-  // Using isSuccess (not isFetching) so it stays true during background refetches.
-  const isReady = actorQuery.isSuccess && !!actorQuery.data;
+  // isReady is true only when we have a successfully fetched authenticated actor
+  // It never flips back to false during background refetches
+  const isReady = actorQuery.isSuccess && !!actorQuery.data && !!identity;
 
   return {
     actor: actorQuery.data || null,
