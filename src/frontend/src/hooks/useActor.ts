@@ -52,8 +52,9 @@ export function useActor() {
     }
   }, [actorQuery.data, queryClient]);
 
-  // isReady = true once we have a successful fetch with actual data
-  // This never flips back to false during background refetches
+  // isReady is true once the actor has successfully loaded at least once.
+  // It does NOT flip back to false during background refetches, so buttons
+  // that depend on it will never re-disable after the initial load.
   const isReady = actorQuery.isSuccess && !!actorQuery.data;
 
   return {
