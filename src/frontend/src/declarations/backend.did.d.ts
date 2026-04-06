@@ -82,6 +82,7 @@ export interface _SERVICE {
     [string, string, string, string, string, string],
     string
   >,
+  'deleteRegistration' : ActorMethod<[bigint], string>,
   'registerServiceProvider' : ActorMethod<[ServiceProviderProfile], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'sendChatMessage' : ActorMethod<

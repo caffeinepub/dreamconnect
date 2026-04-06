@@ -97,6 +97,7 @@ export interface backendInterface {
     isCallerAdmin(): Promise<boolean>;
     recordSpSlotPayment(category: string, product: string): Promise<void>;
     registerForProduct(category: string, product: string, name: string, phone: string, location: string, requirements: string): Promise<string>;
+    deleteRegistration(registrationId: bigint): Promise<string>;
     registerServiceProvider(profile: ServiceProviderProfile): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendChatMessage(category: string, product: string, serviceProviderId: string, content: string, senderIsProvider: boolean): Promise<void>;

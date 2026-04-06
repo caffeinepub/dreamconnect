@@ -307,6 +307,29 @@ actor {
     "Registration successful";
   };
 
+  public shared ({ caller }) func deleteRegistration(registrationId : Nat) : async Text {
+    if (not ensureRegistered(caller)) { Runtime.trap("Unauthorized: Please sign in") };
+    let callerId = toText(caller);
+    var found = false;
+    let remaining = List.empty<Registration>();
+    for (r in registrations.values()) {
+      if (r.id == registrationId) {
+        found := true;
+        if (r.userId != callerId) {
+          Runtime.trap("Unauthorized: You can only delete your own registrations");
+        };
+        // skip adding — this removes it
+      } else {
+        remaining.add(r);
+      };
+    };
+    if (not found) { Runtime.trap("Registration not found") };
+    // Replace in-memory list contents
+    registrations.clear();
+    for (r in remaining.values()) { registrations.add(r) };
+    "Registration deleted";
+  };
+
   public query func getProductCount(category : Text, product : Text) : async Nat {
     registrations.filter(func(r) { r.category == category and r.product == product }).size();
   };

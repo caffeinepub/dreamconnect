@@ -589,3 +589,18 @@ export function usePublicRegistrationsForCategory(category: string) {
     staleTime: 30000,
   });
 }
+
+export function useDeleteRegistration() {
+  const { actor } = useActor();
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (registrationId: bigint) => {
+      if (!actor) throw new Error("Not signed in");
+      return (actor as any).deleteRegistration(registrationId);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["myRegistrations"] });
+      queryClient.invalidateQueries({ queryKey: ["publicRegistrations"] });
+    },
+  });
+}

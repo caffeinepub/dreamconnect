@@ -18,46 +18,67 @@ import {
 } from "@tanstack/react-query";
 import {
   AlertTriangle,
+  Archive,
   Armchair,
   Bike,
   BookOpen,
   Briefcase,
+  Building,
   Building2,
   Bus,
   CalendarDays,
+  Camera,
   Car,
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  Droplet,
+  Droplets,
   Dumbbell,
+  Factory,
+  Flame,
   FlameKindling,
   Flower2,
+  GraduationCap,
+  Hammer,
   HardHat,
+  Headphones,
   Heart,
   Home,
   IndianRupee,
+  Laptop,
+  Layers,
   Leaf,
   Loader2,
   LogOut,
   MapPin,
+  Microwave,
   Monitor,
   Package,
+  Paintbrush,
   PartyPopper,
   PawPrint,
   Phone,
   Plane,
   Printer,
+  Scissors,
   Search,
   Shield,
   Smartphone,
   Sofa,
+  Star,
   Stethoscope,
   Tractor,
   TrendingUp,
   Trophy,
   Truck,
+  Tv,
   User,
   Users,
+  UtensilsCrossed,
+  Volume2,
+  Watch,
+  Wind,
   Wrench,
   X,
   Zap,
@@ -71,6 +92,7 @@ import {
   type Registration,
   type ServiceProviderProfile,
   useAllRegistrations,
+  useDeleteRegistration,
   useGetCallerUserProfile,
   useIsAdmin,
   useMyRegistrations,
@@ -1391,6 +1413,146 @@ function MemberAvatarStack({
   );
 }
 
+const PRODUCT_ICONS: Record<string, React.ElementType> = {
+  // Electronics
+  Mobile: Smartphone,
+  Laptop: Laptop,
+  TV: Tv,
+  Speakers: Volume2,
+  Camera: Camera,
+  Headphones: Headphones,
+  Smartwatch: Watch,
+  "Gaming Console": Monitor,
+  // Appliances
+  Refrigerator: Monitor,
+  "Washing Machine": Monitor,
+  AC: Wind,
+  Microwave: Microwave,
+  Geyser: Flame,
+  Dishwasher: Droplets,
+  "Water Purifier": Droplet,
+  Chimney: Flame,
+  "Air Purifier": Wind,
+  Oven: Flame,
+  // Vehicles — prefix-based
+  Car: Car,
+  Bike: Bike,
+  Truck: Truck,
+  Bus: Bus,
+  "Heavy Equipment": Tractor,
+  "Three Wheeler": Tractor,
+  // Interior
+  Home: Home,
+  "Restaurant/Cafe": UtensilsCrossed,
+  Office: Briefcase,
+  Showroom: Building,
+  "Salon/Spa/Beauty Parlour": Scissors,
+  "Gym/Fitness Studio": Dumbbell,
+  // Furniture
+  Sofa: Sofa,
+  Bed: Monitor,
+  Wardrobe: Archive,
+  "Dining Table": UtensilsCrossed,
+  "Office Chair": Armchair,
+  Bookshelf: BookOpen,
+  "TV Unit": Tv,
+  "Shoe Rack": Archive,
+  "Home Furniture": Sofa,
+  "Office Furniture": Armchair,
+  "Restaurant Furniture": UtensilsCrossed,
+  // Real Estate
+  Apartment: Building,
+  Villa: Home,
+  Plot: Layers,
+  "Commercial Space": Building2,
+  Studio: Home,
+  Penthouse: Building2,
+  Farmhouse: Home,
+  Warehouse: Factory,
+  // Gym
+  Treadmill: Dumbbell,
+  Dumbbells: Dumbbell,
+  "Bench Press": Dumbbell,
+  Elliptical: Dumbbell,
+  "Rowing Machine": Dumbbell,
+  "Pull-up Bar": Dumbbell,
+  "Resistance Bands": Dumbbell,
+  "Yoga Mat": Dumbbell,
+  "Exercise Bike": Bike,
+  Kettlebells: Dumbbell,
+  // Courses
+  Programming: Laptop,
+  Design: Paintbrush,
+  "Digital Marketing": TrendingUp,
+  Finance: Briefcase,
+  Language: BookOpen,
+  Photography: Camera,
+  Music: Volume2,
+  Cooking: UtensilsCrossed,
+  Fitness: Dumbbell,
+  Business: Briefcase,
+  // Beauty
+  "Hair Care": Scissors,
+  "Skin Care": Flower2,
+  Makeup: Flower2,
+  "Nail Care": Scissors,
+  Spa: Flower2,
+  Waxing: Scissors,
+  "Bridal Package": Flower2,
+  Massage: Flower2,
+  Facial: Flower2,
+  "Eyebrow Threading": Scissors,
+  "Beauty Products": Flower2,
+  // Construction Materials
+  Cement: HardHat,
+  Steel: HardHat,
+  Bricks: HardHat,
+  Sand: HardHat,
+  Tiles: Layers,
+  Paint: Paintbrush,
+  Glass: Layers,
+  Plywood: HardHat,
+  Pipes: Droplets,
+  "Electrical Fittings": Hammer,
+  Ceiling: Layers,
+  // Medical
+  "General Physician": Stethoscope,
+  Dentist: Stethoscope,
+  Physiotherapy: Stethoscope,
+  "Eye Care": Stethoscope,
+  Diagnostics: Stethoscope,
+  "Nursing Care": Stethoscope,
+  "Mental Health": Stethoscope,
+  Nutrition: Stethoscope,
+  Paediatrics: Stethoscope,
+  // Business Services
+  Accounting: Briefcase,
+  HR: Briefcase,
+  "App/Web Development": Monitor,
+  Printing: Printer,
+  Security: Shield,
+  Cleaning: Droplets,
+  Consulting: Briefcase,
+  // Food
+  Cake: Star,
+  "Home Made Foods": UtensilsCrossed,
+  // Pets
+  Dogs: PawPrint,
+  Birds: PawPrint,
+  "Fish & Aquarium": Droplet,
+  // Marketing
+  "Fashion Influencers": Star,
+  "Beauty Influencers": Flower2,
+  "Food Influencers": UtensilsCrossed,
+  "Fitness Influencers": Dumbbell,
+  "Travel Influencers": Plane,
+  "Tech Influencers": Laptop,
+  "Lifestyle Influencers": Star,
+  "Parenting Influencers": Star,
+  "Finance Influencers": Briefcase,
+  "Education Influencers": GraduationCap,
+};
+
 // ===== PRODUCT CARD =====
 interface ProductCardProps {
   product: string;
@@ -1414,7 +1576,15 @@ function ProductCard({
   onAuthRequired,
 }: ProductCardProps) {
   const cat = CATEGORIES.find((c) => c.id === category);
-  const Icon = cat?.icon ?? Monitor;
+  // For vehicle products like "Car - Tata", extract the prefix
+  const productPrefix = product.includes(" - ")
+    ? product.split(" - ")[0]
+    : product;
+  const Icon =
+    PRODUCT_ICONS[product] ??
+    PRODUCT_ICONS[productPrefix] ??
+    cat?.icon ??
+    Monitor;
   const isFull = count >= MAX_SLOTS;
   const pct = Math.min((count / MAX_SLOTS) * 100, 100);
   const barColor = getBarColor(count);
@@ -1876,11 +2046,6 @@ function HomePage({
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {HOME_MONTH_TABS.map((tab, idx) => {
-            const count = publicRegs.filter(
-              (r: PublicRegistration) =>
-                getMemberMonthHome(r).year === tab.year &&
-                getMemberMonthHome(r).month === tab.month,
-            ).length;
             return (
               <button
                 key={tab.label}
@@ -1894,13 +2059,6 @@ function HomePage({
                 }`}
               >
                 {tab.label}
-                {count > 0 && (
-                  <span
-                    className={`ml-1.5 text-xs font-bold ${idx === activeHomeMonthIdx ? "opacity-80" : "text-muted-foreground"}`}
-                  >
-                    ({count})
-                  </span>
-                )}
               </button>
             );
           })}
@@ -2133,6 +2291,8 @@ function HomePage({
 // ===== MY REGISTRATIONS PAGE =====
 function MyRegistrationsPage() {
   const { data: registrations = [], isLoading } = useMyRegistrations();
+  const deleteRegistration = useDeleteRegistration();
+  const [confirmDeleteId, setConfirmDeleteId] = useState<bigint | null>(null);
 
   const formatDate = (ts: bigint) => {
     const d = new Date(Number(ts) / 1_000_000);
@@ -2274,19 +2434,57 @@ function MyRegistrationsPage() {
                         >
                           Move to {getNextMonthLabel()}
                         </Button>
-                        <Button
-                          data-ocid={`my_registrations.remove_button.${idx + 1}`}
-                          size="sm"
-                          variant="ghost"
-                          className="text-xs h-7 text-muted-foreground hover:text-destructive"
-                          onClick={() => {
-                            toast.info(
-                              "To remove this registration, please contact support or re-register with an updated timeline.",
-                            );
-                          }}
-                        >
-                          Remove
-                        </Button>
+                        {confirmDeleteId === reg.id ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-xs text-destructive font-semibold">
+                              Are you sure?
+                            </span>
+                            <Button
+                              data-ocid={`my_registrations.confirm_button.${idx + 1}`}
+                              size="sm"
+                              variant="destructive"
+                              className="text-xs h-7"
+                              disabled={deleteRegistration.isPending}
+                              onClick={async () => {
+                                try {
+                                  await deleteRegistration.mutateAsync(reg.id);
+                                  toast.success("Registration removed");
+                                  setConfirmDeleteId(null);
+                                } catch {
+                                  toast.error(
+                                    "Failed to remove registration. Please try again.",
+                                  );
+                                }
+                              }}
+                            >
+                              {deleteRegistration.isPending ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : (
+                                "Yes, remove"
+                              )}
+                            </Button>
+                            <Button
+                              data-ocid={`my_registrations.cancel_button.${idx + 1}`}
+                              size="sm"
+                              variant="ghost"
+                              className="text-xs h-7"
+                              disabled={deleteRegistration.isPending}
+                              onClick={() => setConfirmDeleteId(null)}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            data-ocid={`my_registrations.remove_button.${idx + 1}`}
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs h-7 text-muted-foreground hover:text-destructive"
+                            onClick={() => setConfirmDeleteId(reg.id)}
+                          >
+                            Remove
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </motion.div>
@@ -2340,8 +2538,61 @@ function MyRegistrationsPage() {
                         {reg.location}
                       </p>
                     </div>
-                    <div className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatDate(reg.timestamp)}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="text-xs text-muted-foreground whitespace-nowrap">
+                        {formatDate(reg.timestamp)}
+                      </div>
+                      {confirmDeleteId === reg.id ? (
+                        <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                          <span className="text-xs text-destructive font-semibold">
+                            Sure?
+                          </span>
+                          <Button
+                            data-ocid={`my_registrations.confirm_button.${expiredRegs.length + idx + 1}`}
+                            size="sm"
+                            variant="destructive"
+                            className="text-xs h-6 px-2"
+                            disabled={deleteRegistration.isPending}
+                            onClick={async () => {
+                              try {
+                                await deleteRegistration.mutateAsync(reg.id);
+                                toast.success("Registration removed");
+                                setConfirmDeleteId(null);
+                              } catch {
+                                toast.error(
+                                  "Failed to remove registration. Please try again.",
+                                );
+                              }
+                            }}
+                          >
+                            {deleteRegistration.isPending ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              "Yes"
+                            )}
+                          </Button>
+                          <Button
+                            data-ocid={`my_registrations.cancel_button.${expiredRegs.length + idx + 1}`}
+                            size="sm"
+                            variant="ghost"
+                            className="text-xs h-6 px-2"
+                            disabled={deleteRegistration.isPending}
+                            onClick={() => setConfirmDeleteId(null)}
+                          >
+                            No
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          data-ocid={`my_registrations.remove_button.${expiredRegs.length + idx + 1}`}
+                          size="sm"
+                          variant="ghost"
+                          className="text-xs h-6 px-2 text-muted-foreground hover:text-destructive"
+                          onClick={() => setConfirmDeleteId(reg.id)}
+                        >
+                          Remove
+                        </Button>
+                      )}
                     </div>
                   </motion.div>
                 );

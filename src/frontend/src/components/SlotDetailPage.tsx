@@ -220,17 +220,6 @@ export function SlotDetailPage({
     return idx >= 0 ? idx : 0;
   });
 
-  // Count members per month tab
-  const memberCountsByMonth = useMemo(() => {
-    return monthTabs.map(
-      (tab) =>
-        members.filter((m) => {
-          const { year, month } = getMemberMonth(m.requirements, m.timestamp);
-          return year === tab.year && month === tab.month;
-        }).length,
-    );
-  }, [members, monthTabs]);
-
   // Filtered members for active month
   const filteredMembers = useMemo(() => {
     const tab = monthTabs[activeMonthIdx];
@@ -354,17 +343,6 @@ export function SlotDetailPage({
                 }`}
               >
                 {tab.label}
-                {memberCountsByMonth[idx] > 0 && (
-                  <span
-                    className={`ml-1.5 text-xs font-bold ${
-                      idx === activeMonthIdx
-                        ? "opacity-80"
-                        : "text-muted-foreground"
-                    }`}
-                  >
-                    ({memberCountsByMonth[idx]})
-                  </span>
-                )}
               </button>
             ))}
           </div>

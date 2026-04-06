@@ -14,7 +14,7 @@ import {
   Users,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useInternetIdentity } from "../hooks/useInternetIdentity";
 import {
@@ -26,15 +26,6 @@ import {
   useJoinCustomSlot,
 } from "../hooks/useQueries";
 import type { CustomSlot, CustomSlotMember } from "../hooks/useQueries";
-
-// Helper: parse [Month: YYYY-MM] from a requirements string
-function parseMonthFromReqs(
-  req: string,
-): { year: number; month: number } | null {
-  const m = req.match(/\[Month:\s*(\d{4})-(\d{2})\]/);
-  if (!m) return null;
-  return { year: Number.parseInt(m[1], 10), month: Number.parseInt(m[2], 10) };
-}
 
 const SLOT_CATEGORIES = [
   "Electronics & Appliances",
@@ -650,9 +641,10 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
 interface JoinSlotModalProps {
   slot: CustomSlot;
   onClose: () => void;
+  activeMonth?: { year: number; month: number; label: string };
 }
 
-function JoinSlotModal({ slot, onClose }: JoinSlotModalProps) {
+function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
@@ -667,12 +659,19 @@ function JoinSlotModal({ slot, onClose }: JoinSlotModalProps) {
       return;
     }
     try {
+      const now = new Date();
+      const purchaseYear = activeMonth?.year ?? now.getFullYear();
+      const purchaseMonth = activeMonth
+        ? activeMonth.month + 1
+        : now.getMonth() + 1;
+      const monthTag = `[Month: ${purchaseYear}-${String(purchaseMonth).padStart(2, "0")}]`;
+      const fullRequirements = `${requirements.trim()} ${monthTag}`.trim();
       await joinSlot.mutateAsync({
         slotId: slot.id,
         name: name.trim(),
         phone: phone.trim(),
         location: location.trim(),
-        requirements: requirements.trim(),
+        requirements: fullRequirements,
       });
       toast.success(`Joined "${slot.title}"!`);
       onClose();
@@ -824,19 +823,61 @@ function JoinSlotModal({ slot, onClose }: JoinSlotModalProps) {
   );
 }
 
+// Generate 6 month tabs
+function generateCustomSlotMonthTabs() {
+  const now = new Date();
+  const tabs: { label: string; year: number; month: number }[] = [];
+  for (let i = 0; i < 6; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    tabs.push({
+      label: d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
+      year: d.getFullYear(),
+      month: d.getMonth(),
+    });
+  }
+  return tabs;
+}
+
+const CUSTOM_SLOT_MONTH_TABS = generateCustomSlotMonthTabs();
+
 // ===== CUSTOM SLOT MEMBERS PAGE =====
 interface CustomSlotMembersPageProps {
   slot: CustomSlot;
   onBack: () => void;
+  defaultMonthIdx?: number;
 }
 
-function CustomSlotMembersPage({ slot, onBack }: CustomSlotMembersPageProps) {
+function CustomSlotMembersPage({
+  slot,
+  onBack,
+  defaultMonthIdx = 0,
+}: CustomSlotMembersPageProps) {
   const { identity } = useInternetIdentity();
   const isAuthenticated = !!identity;
   const { data: members = [], isLoading } = useCustomSlotMembers(
     isAuthenticated ? slot.id : null,
   );
   const color = getCategoryColor(slot.category);
+  const [activeMonthIdx, setActiveMonthIdx] = useState(defaultMonthIdx);
+
+  // Filter members by selected month tab
+  const filteredMembers = useMemo(() => {
+    const tab = CUSTOM_SLOT_MONTH_TABS[activeMonthIdx];
+    if (!tab) return members;
+    return members.filter((m) => {
+      const req = m.requirements || "";
+      const monthMatch = req.match(/\[Month:\s*(\d{4})-(\d{2})\]/);
+      if (monthMatch) {
+        return (
+          Number.parseInt(monthMatch[1]) === tab.year &&
+          Number.parseInt(monthMatch[2]) - 1 === tab.month
+        );
+      }
+      // fallback: use joinedAt timestamp
+      const d = new Date(Number(m.joinedAt) / 1_000_000);
+      return d.getFullYear() === tab.year && d.getMonth() === tab.month;
+    });
+  }, [members, activeMonthIdx]);
 
   return (
     <motion.div
@@ -889,15 +930,39 @@ function CustomSlotMembersPage({ slot, onBack }: CustomSlotMembersPageProps) {
           <span className="flex items-center gap-1">
             <Users size={11} />
             {isAuthenticated
-              ? `${members.length} / ${Number(slot.maxMembers)} members`
+              ? `${filteredMembers.length} / ${Number(slot.maxMembers)} members`
               : `? / ${Number(slot.maxMembers)} members`}
           </span>
         </div>
       </div>
 
+      {/* Month Tabs */}
+      <div
+        data-ocid="slot_members.timeline_tabs"
+        className="flex gap-2 overflow-x-auto pb-2 mb-5"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {CUSTOM_SLOT_MONTH_TABS.map((tab, idx) => (
+          <button
+            key={tab.label}
+            type="button"
+            data-ocid={`slot_members.timeline.tab.${idx + 1}`}
+            onClick={() => setActiveMonthIdx(idx)}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+              idx === activeMonthIdx
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
       {/* Members list */}
       <h2 className="font-display text-lg font-bold text-foreground mb-4">
-        Members {isAuthenticated ? `(${members.length})` : ""}
+        Members in {CUSTOM_SLOT_MONTH_TABS[activeMonthIdx]?.label}{" "}
+        {isAuthenticated ? `(${filteredMembers.length})` : ""}
       </h2>
 
       {!isAuthenticated ? (
@@ -921,7 +986,7 @@ function CustomSlotMembersPage({ slot, onBack }: CustomSlotMembersPageProps) {
             <Skeleton key={i} className="h-24 rounded-xl" />
           ))}
         </div>
-      ) : members.length === 0 ? (
+      ) : filteredMembers.length === 0 ? (
         <div
           data-ocid="slot_members.empty_state"
           className="flex flex-col items-center justify-center py-16 text-center"
@@ -930,15 +995,15 @@ function CustomSlotMembersPage({ slot, onBack }: CustomSlotMembersPageProps) {
             <Users size={24} className="text-muted-foreground" />
           </div>
           <p className="font-display text-lg font-bold text-foreground mb-1">
-            No members yet
+            No members in {CUSTOM_SLOT_MONTH_TABS[activeMonthIdx]?.label}
           </p>
           <p className="text-sm text-muted-foreground">
-            Be the first to join this slot!
+            Be the first to join this slot for this month!
           </p>
         </div>
       ) : (
         <div data-ocid="slot_members.list" className="space-y-3">
-          {members.map((member: CustomSlotMember, idx: number) => (
+          {filteredMembers.map((member: CustomSlotMember, idx: number) => (
             <motion.div
               key={`${member.userId}-${idx}`}
               data-ocid={`slot_members.item.${idx + 1}`}
@@ -995,28 +1060,36 @@ function SlotCardWrapper({
   );
   const { data: memberCount = 0 } = useCustomSlotMemberCount(slot.id);
   const { data: members } = useCustomSlotMembers(
-    isAuthenticated && activeMonth ? slot.id : null,
+    isAuthenticated ? slot.id : null,
   );
 
-  // Compute month-filtered count only when authenticated and activeMonth is provided
-  const monthFilteredCount =
-    isAuthenticated && activeMonth && members
-      ? members.filter((m) => {
-          const parsed = parseMonthFromReqs(m.requirements);
-          if (!parsed) return false;
-          return (
-            parsed.year === activeMonth.year &&
-            parsed.month === activeMonth.month
-          );
-        }).length
-      : undefined;
+  // Compute month-filtered count for the active month tab
+  const monthFilteredCount = useMemo(() => {
+    if (!activeMonth || !members) return members?.length ?? 0;
+    return members.filter((m) => {
+      const req = m.requirements || "";
+      const monthMatch = req.match(/\[Month:\s*(\d{4})-(\d{2})\]/);
+      if (monthMatch) {
+        return (
+          Number.parseInt(monthMatch[1]) === activeMonth.year &&
+          Number.parseInt(monthMatch[2]) - 1 === activeMonth.month
+        );
+      }
+      // fallback: use joinedAt timestamp
+      const d = new Date(Number(m.joinedAt) / 1_000_000);
+      return (
+        d.getFullYear() === activeMonth.year &&
+        d.getMonth() === activeMonth.month
+      );
+    }).length;
+  }, [members, activeMonth]);
 
   return (
     <CustomSlotCard
       slot={slot}
       index={index}
       memberCount={memberCount}
-      monthFilteredCount={monthFilteredCount}
+      monthFilteredCount={activeMonth ? monthFilteredCount : undefined}
       isMember={isMember}
       onJoin={() => {
         if (!isAuthenticated) {
@@ -1068,6 +1141,15 @@ export function CustomSlotsSection({
       ? slots
       : slots.filter((s) => s.category === categoryFilter);
 
+  // Compute the index of activeMonth in the month tabs
+  const activeMonthIdx = useMemo(() => {
+    if (!activeMonth) return 0;
+    const idx = CUSTOM_SLOT_MONTH_TABS.findIndex(
+      (t) => t.year === activeMonth.year && t.month === activeMonth.month,
+    );
+    return idx >= 0 ? idx : 0;
+  }, [activeMonth]);
+
   if (viewingSlot) {
     return (
       <AnimatePresence mode="wait">
@@ -1075,6 +1157,7 @@ export function CustomSlotsSection({
           key={String(viewingSlot.id)}
           slot={viewingSlot}
           onBack={() => setViewingSlot(null)}
+          defaultMonthIdx={activeMonthIdx}
         />
       </AnimatePresence>
     );
@@ -1196,6 +1279,7 @@ export function CustomSlotsSection({
           <JoinSlotModal
             slot={joiningSlot}
             onClose={() => setJoiningSlot(null)}
+            activeMonth={activeMonth}
           />
         )}
       </AnimatePresence>

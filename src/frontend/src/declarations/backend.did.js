@@ -64,7 +64,7 @@ export const CustomSlot = IDL.Record({
 });
 export const CustomSlotMember = IDL.Record({
   'slotId' : IDL.Nat,
-  'memberId' : IDL.Text,
+  'userId' : IDL.Text,
   'name' : IDL.Text,
   'phone' : IDL.Text,
   'location' : IDL.Text,
@@ -129,6 +129,7 @@ export const idlService = IDL.Service({
       [IDL.Text],
       [],
     ),
+  'deleteRegistration' : IDL.Func([IDL.Nat], [IDL.Text], []),
   'registerServiceProvider' : IDL.Func([ServiceProviderProfile], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'sendChatMessage' : IDL.Func(
@@ -231,16 +232,16 @@ export const idlFactory = ({ IDL }) => {
     'location' : IDL.Text,
     'creatorId' : IDL.Text,
     'maxMembers' : IDL.Nat,
-    'createdAt' : Time,
+    'createdAt' : IDL.Nat,
   });
   const CustomSlotMember = IDL.Record({
     'slotId' : IDL.Nat,
-    'memberId' : IDL.Text,
+    'userId' : IDL.Text,
     'name' : IDL.Text,
     'phone' : IDL.Text,
     'location' : IDL.Text,
     'requirements' : IDL.Text,
-    'joinedAt' : Time,
+    'joinedAt' : IDL.Nat,
   });
   const PublicRegistration = IDL.Record({
     'product' : IDL.Text,
@@ -300,6 +301,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Text],
         [],
       ),
+    'deleteRegistration' : IDL.Func([IDL.Nat], [IDL.Text], []),
     'registerServiceProvider' : IDL.Func([ServiceProviderProfile], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'sendChatMessage' : IDL.Func(
