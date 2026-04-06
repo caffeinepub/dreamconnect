@@ -389,13 +389,16 @@ function CreateSlotModal({
         creatorPhone: creatorPhone.trim(),
         creatorRequirements: fullCreatorReq,
       });
-      // Wait for the slot list to refresh before closing the modal
-      // Partial key match (no exact) hits ["customSlots", principalKey]
+      // Wait a tick for onSuccess to fire its refetch, then do a final refetch
+      // to ensure the slot list is up-to-date before closing the modal
+      await new Promise((r) => setTimeout(r, 300));
       await queryClient.refetchQueries({
         queryKey: ["customSlots"],
+        exact: false,
       });
       await queryClient.refetchQueries({
         queryKey: ["isCustomSlotMember"],
+        exact: false,
       });
       toast.success(
         "Community slot created! You've been added as the first member.",
