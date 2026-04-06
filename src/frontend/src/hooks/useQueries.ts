@@ -455,14 +455,17 @@ export interface PublicRegistration {
 
 export function useCustomSlots() {
   const { actor } = useActor();
+  const { identity } = useInternetIdentity();
+  const principalKey = identity?.getPrincipal().toString() ?? "anon";
   return useQuery<CustomSlot[]>({
-    queryKey: ["customSlots"],
+    queryKey: ["customSlots", principalKey],
     queryFn: async () => {
       if (!actor) return [];
       return (actor as any).getCustomSlots();
     },
     enabled: !!actor,
     refetchInterval: 15000,
+    staleTime: 0,
   });
 }
 

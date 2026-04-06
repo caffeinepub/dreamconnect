@@ -333,9 +333,14 @@ function CustomSlotCard({
 interface CreateSlotModalProps {
   onClose: () => void;
   categoryId?: string;
+  activeMonth?: { year: number; month: number; label: string };
 }
 
-function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
+function CreateSlotModal({
+  onClose,
+  categoryId,
+  activeMonth,
+}: CreateSlotModalProps) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState(categoryId ?? "Other");
   const [description, setDescription] = useState("");
@@ -367,6 +372,13 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
     }
     setIsSubmitting(true);
     try {
+      const now = new Date();
+      const purchaseYear = activeMonth?.year ?? now.getFullYear();
+      const purchaseMonth = activeMonth
+        ? activeMonth.month + 1
+        : now.getMonth() + 1;
+      const monthTag = `[Month: ${purchaseYear}-${String(purchaseMonth).padStart(2, "0")}]`;
+      const fullCreatorReq = `${creatorRequirements.trim()} ${monthTag}`.trim();
       await createSlot.mutateAsync({
         title: title.trim(),
         category,
@@ -375,11 +387,14 @@ function CreateSlotModal({ onClose, categoryId }: CreateSlotModalProps) {
         maxMembers,
         creatorName: creatorName.trim(),
         creatorPhone: creatorPhone.trim(),
-        creatorRequirements: creatorRequirements.trim(),
+        creatorRequirements: fullCreatorReq,
       });
+      // Invalidate all custom slot queries (partial key match covers all variants)
+      await queryClient.invalidateQueries({ queryKey: ["customSlots"] });
       await queryClient.refetchQueries({ queryKey: ["customSlots"] });
       queryClient.invalidateQueries({ queryKey: ["customSlotMemberCount"] });
       queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
+      queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
       toast.success(
         "Community slot created! You've been added as the first member.",
       );
@@ -1273,6 +1288,7 @@ export function CustomSlotsSection({
               onExternalCreateClose?.();
             }}
             categoryId={categoryId}
+            activeMonth={activeMonth}
           />
         )}
         {joiningSlot && (

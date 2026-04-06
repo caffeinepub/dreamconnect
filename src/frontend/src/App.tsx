@@ -2039,31 +2039,29 @@ function HomePage({
         )}
 
       {/* Month Timeline Tabs */}
-      {!CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory) && (
-        <div
-          data-ocid="home.timeline_tabs"
-          className="flex gap-2 overflow-x-auto mb-5 pb-1"
-          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-        >
-          {HOME_MONTH_TABS.map((tab, idx) => {
-            return (
-              <button
-                key={tab.label}
-                type="button"
-                data-ocid={`home.timeline.tab.${idx + 1}`}
-                onClick={() => setActiveHomeMonthIdx(idx)}
-                className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
-                  idx === activeHomeMonthIdx
-                    ? "bg-primary text-primary-foreground shadow-sm"
-                    : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
-                }`}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <div
+        data-ocid="home.timeline_tabs"
+        className="flex gap-2 overflow-x-auto mb-5 pb-1"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {HOME_MONTH_TABS.map((tab, idx) => {
+          return (
+            <button
+              key={tab.label}
+              type="button"
+              data-ocid={`home.timeline.tab.${idx + 1}`}
+              onClick={() => setActiveHomeMonthIdx(idx)}
+              className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                idx === activeHomeMonthIdx
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+              }`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Create Custom Slot CTA for regular categories */}
       {!CUSTOM_SLOT_ONLY_CATEGORIES.includes(activeCategory) && (

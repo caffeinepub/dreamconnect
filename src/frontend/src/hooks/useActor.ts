@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { backendInterface } from "../backend";
 import { createActorWithConfig } from "../config";
 import { getSecretParameter } from "../utils/urlParams";
@@ -9,6 +9,9 @@ const ACTOR_QUERY_KEY = "actor";
 export function useActor() {
   const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
+  // Use a ref to latch isReady — once true, stays true even during background refetches
+  const isReadyRef = useRef(false);
+
   const actorQuery = useQuery<backendInterface>({
     queryKey: [ACTOR_QUERY_KEY, identity?.getPrincipal().toString()],
     queryFn: async () => {
@@ -36,6 +39,11 @@ export function useActor() {
     enabled: true,
   });
 
+  // Latch isReady — once the query succeeds, keep it true
+  if (actorQuery.isSuccess && actorQuery.data) {
+    isReadyRef.current = true;
+  }
+
   // When the actor changes, invalidate dependent queries
   useEffect(() => {
     if (actorQuery.data) {
@@ -55,6 +63,6 @@ export function useActor() {
   return {
     actor: actorQuery.data || null,
     isFetching: actorQuery.isFetching,
-    isReady: actorQuery.isSuccess && !!actorQuery.data,
+    isReady: isReadyRef.current,
   };
 }
