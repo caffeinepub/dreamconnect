@@ -9,7 +9,8 @@ const ACTOR_QUERY_KEY = "actor";
 export function useActor() {
   const { identity } = useInternetIdentity();
   const queryClient = useQueryClient();
-  // Once ready, stay ready — never flicker back to false on background refetches
+  // Latching ref: once actor is ready, stays true — never flips back
+  // during background refetches or identity changes mid-session
   const isReadyRef = useRef(false);
 
   const actorQuery = useQuery<backendInterface>({
@@ -39,7 +40,7 @@ export function useActor() {
     enabled: true,
   });
 
-  // Latch isReady to true once we have data — never reset during background refetches
+  // Latch isReady to true as soon as we have actor data — never reset it
   if (actorQuery.isSuccess && actorQuery.data) {
     isReadyRef.current = true;
   }
