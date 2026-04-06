@@ -389,10 +389,20 @@ function CreateSlotModal({
         creatorPhone: creatorPhone.trim(),
         creatorRequirements: fullCreatorReq,
       });
-      // Invalidate all custom slot queries (partial key match covers all variants)
+      // Invalidate all custom slot queries and wait for refetch before closing
       await queryClient.invalidateQueries({ queryKey: ["customSlots"] });
-      await queryClient.refetchQueries({ queryKey: ["customSlots"] });
-      queryClient.invalidateQueries({ queryKey: ["customSlotMemberCount"] });
+      // Force an immediate refetch so the new slot is visible before modal closes
+      await queryClient.refetchQueries({
+        queryKey: ["customSlots"],
+        exact: false,
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["customSlotMemberCount"],
+      });
+      await queryClient.refetchQueries({
+        queryKey: ["customSlotMemberCount"],
+        exact: false,
+      });
       queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
       queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
       toast.success(
@@ -874,6 +884,11 @@ function CustomSlotMembersPage({
   );
   const color = getCategoryColor(slot.category);
   const [activeMonthIdx, setActiveMonthIdx] = useState(defaultMonthIdx);
+
+  // Sync with parent activeMonth when it changes
+  useEffect(() => {
+    setActiveMonthIdx(defaultMonthIdx);
+  }, [defaultMonthIdx]);
 
   // Filter members by selected month tab
   const filteredMembers = useMemo(() => {

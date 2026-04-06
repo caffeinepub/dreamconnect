@@ -466,6 +466,8 @@ export function useCustomSlots() {
     enabled: !!actor,
     refetchInterval: 15000,
     staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
   });
 }
 
@@ -499,9 +501,18 @@ export function useCreateCustomSlot() {
         vars.creatorRequirements,
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customSlots"] });
+    onSuccess: async () => {
+      // Invalidate and immediately refetch so the new slot appears without delay
+      await queryClient.invalidateQueries({ queryKey: ["customSlots"] });
+      await queryClient.refetchQueries({
+        queryKey: ["customSlots"],
+        exact: false,
+      });
       queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
+      queryClient.refetchQueries({
+        queryKey: ["customSlotMembers"],
+        exact: false,
+      });
       queryClient.invalidateQueries({ queryKey: ["customSlotMemberCount"] });
       queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
     },
@@ -532,9 +543,17 @@ export function useJoinCustomSlot() {
         vars.requirements,
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["customSlots"] });
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["customSlots"] });
+      await queryClient.refetchQueries({
+        queryKey: ["customSlots"],
+        exact: false,
+      });
       queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
+      queryClient.refetchQueries({
+        queryKey: ["customSlotMembers"],
+        exact: false,
+      });
       queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
     },
   });
@@ -564,7 +583,8 @@ export function useCustomSlotMembers(slotId: bigint | null) {
     },
     enabled: !!actor && slotId !== null,
     refetchInterval: 15000,
-    refetchOnMount: true,
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 }
 
