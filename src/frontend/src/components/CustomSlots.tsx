@@ -389,22 +389,14 @@ function CreateSlotModal({
         creatorPhone: creatorPhone.trim(),
         creatorRequirements: fullCreatorReq,
       });
-      // Invalidate all custom slot queries and wait for refetch before closing
-      await queryClient.invalidateQueries({ queryKey: ["customSlots"] });
-      // Force an immediate refetch so the new slot is visible before modal closes
+      // Wait for the slot list to refresh before closing the modal
+      // Partial key match (no exact) hits ["customSlots", principalKey]
       await queryClient.refetchQueries({
         queryKey: ["customSlots"],
-        exact: false,
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["customSlotMemberCount"],
       });
       await queryClient.refetchQueries({
-        queryKey: ["customSlotMemberCount"],
-        exact: false,
+        queryKey: ["isCustomSlotMember"],
       });
-      queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
-      queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
       toast.success(
         "Community slot created! You've been added as the first member.",
       );

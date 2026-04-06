@@ -502,19 +502,16 @@ export function useCreateCustomSlot() {
       );
     },
     onSuccess: async () => {
-      // Invalidate and immediately refetch so the new slot appears without delay
-      await queryClient.invalidateQueries({ queryKey: ["customSlots"] });
+      // Refetch all custom slot data immediately after creation
+      // Use partial key match (no exact) so it hits ["customSlots", principalKey]
       await queryClient.refetchQueries({
         queryKey: ["customSlots"],
-        exact: false,
       });
-      queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
-      queryClient.refetchQueries({
-        queryKey: ["customSlotMembers"],
-        exact: false,
+      await queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["customSlotMemberCount"],
       });
-      queryClient.invalidateQueries({ queryKey: ["customSlotMemberCount"] });
-      queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
+      await queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
     },
   });
   return {
@@ -544,17 +541,14 @@ export function useJoinCustomSlot() {
       );
     },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["customSlots"] });
       await queryClient.refetchQueries({
         queryKey: ["customSlots"],
-        exact: false,
       });
-      queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
-      queryClient.refetchQueries({
-        queryKey: ["customSlotMembers"],
-        exact: false,
+      await queryClient.invalidateQueries({ queryKey: ["customSlotMembers"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["customSlotMemberCount"],
       });
-      queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
+      await queryClient.invalidateQueries({ queryKey: ["isCustomSlotMember"] });
     },
   });
 }
@@ -597,6 +591,8 @@ export function useIsCustomSlotMember(slotId: bigint | null) {
       return (actor as any).isCustomSlotMember(slotId);
     },
     enabled: !!actor && slotId !== null,
+    staleTime: 0,
+    refetchOnMount: "always",
   });
 }
 
