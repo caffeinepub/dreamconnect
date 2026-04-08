@@ -1,0 +1,121 @@
+type UserRole = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserProfile = record {name: text;};
+type Time = int;
+type ServiceProviderProfile = 
+ record {
+   businessName: text;
+   category: text;
+   name: text;
+   phone: text;
+ };
+type Registration = 
+ record {
+   category: text;
+   id: nat;
+   location: text;
+   name: text;
+   phone: text;
+   product: text;
+   requirements: text;
+   timestamp: Time;
+   userId: text;
+ };
+type Quote = 
+ record {
+   businessName: text;
+   description: text;
+   id: nat;
+   price: text;
+   providerName: text;
+   serviceProviderId: text;
+   slotKey: text;
+   timestamp: Time;
+   title: text;
+ };
+type PublicRegistration = 
+ record {
+   location: text;
+   product: text;
+   requirements: text;
+ };
+type CustomSlotMember = 
+ record {
+   joinedAt: Time;
+   location: text;
+   name: text;
+   phone: text;
+   requirements: text;
+   slotId: nat;
+   userId: text;
+ };
+type CustomSlot = 
+ record {
+   category: text;
+   createdAt: Time;
+   creatorId: text;
+   description: text;
+   id: nat;
+   location: text;
+   maxMembers: nat;
+   title: text;
+ };
+type ChatMessage = 
+ record {
+   content: text;
+   id: nat;
+   memberId: text;
+   senderIsProvider: bool;
+   serviceProviderId: text;
+   slotKey: text;
+   timestamp: Time;
+ };
+service : {
+  _initializeAccessControl: () -> ();
+  assignCallerUserRole: (user: principal, role: UserRole) -> ();
+  createCustomSlot: (title: text, category: text, description: text,
+   location: text, maxMembers: nat, creatorName: text, creatorPhone: 
+   text, creatorRequirements: text) -> (nat);
+  deleteRegistration: (registrationId: nat) -> (text);
+  getAllRegistrations: () -> (vec Registration) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole) query;
+  getCategories: () -> (vec text) query;
+  getChatMessages: (category: text, product: text, serviceProviderId:
+   text) -> (vec ChatMessage) query;
+  getCustomSlotMemberCount: (slotId: nat) -> (nat) query;
+  getCustomSlotMembers: (slotId: nat) -> (vec CustomSlotMember) query;
+  getCustomSlots: () -> (vec CustomSlot) query;
+  getCustomSlotsForCategory: (category: text) -> (vec CustomSlot) query;
+  getMyRegistrations: () -> (vec Registration) query;
+  getMyServiceProviderProfile: () -> (opt ServiceProviderProfile) query;
+  getProductCount: (category: text, product: text) -> (nat) query;
+  getProductsForCategory: (category: text) -> (vec text) query;
+  getProviderChatMessages: (category: text, product: text, memberId: 
+   text) -> (vec ChatMessage) query;
+  getPublicRegistrationsForCategory: (category: text) ->
+   (vec PublicRegistration) query;
+  getQuotesForSlot: (category: text, product: text) -> (vec Quote) query;
+  getSlotMembers: (category: text, product: text) -> (vec Registration) query;
+  getUserProfile: (user: principal) -> (opt UserProfile) query;
+  hasSpPaidForSlot: (category: text, product: text) -> (bool) query;
+  isCallerAdmin: () -> (bool) query;
+  isCustomSlotMember: (slotId: nat) -> (bool) query;
+  joinCustomSlot: (slotId: nat, name: text, phone: text, location: text,
+   requirements: text) -> (text);
+  recordSpSlotPayment: (category: text, product: text) -> ();
+  registerForProduct: (category: text, product: text, name: text, phone:
+   text, location: text, requirements: text) -> (text);
+  registerServiceProvider: (profile: ServiceProviderProfile) -> ();
+  saveCallerUserProfile: (profile: UserProfile) -> ();
+  sendChatMessage: (category: text, product: text, serviceProviderId: 
+   text, content: text, senderIsProvider: bool) -> ();
+  sendChatMessageAsProvider: (category: text, product: text, memberId: 
+   text, content: text) -> ();
+  submitQuote: (category: text, product: text, title: text, description:
+   text, price: text) -> ();
+}

@@ -7,6 +7,12 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+export interface ServiceProviderProfile {
+    name: string;
+    businessName: string;
+    category: string;
+    phone: string;
+}
 export type Time = bigint;
 export interface Registration {
     id: bigint;
@@ -19,14 +25,14 @@ export interface Registration {
     location: string;
     product: string;
 }
-export interface ChatMessage {
-    id: bigint;
-    memberId: string;
-    senderIsProvider: boolean;
-    slotKey: string;
-    content: string;
-    serviceProviderId: string;
-    timestamp: Time;
+export interface CustomSlotMember {
+    userId: string;
+    name: string;
+    joinedAt: Time;
+    slotId: bigint;
+    phone: string;
+    requirements: string;
+    location: string;
 }
 export interface Quote {
     id: bigint;
@@ -39,38 +45,32 @@ export interface Quote {
     providerName: string;
     price: string;
 }
-export interface UserProfile {
-    name: string;
-}
-export interface ServiceProviderProfile {
-    name: string;
-    businessName: string;
-    category: string;
-    phone: string;
-}
 export interface CustomSlot {
     id: bigint;
     title: string;
-    category: string;
-    description: string;
-    location: string;
-    creatorId: string;
-    maxMembers: bigint;
     createdAt: Time;
-}
-export interface CustomSlotMember {
-    slotId: bigint;
-    userId: string;
-    name: string;
-    phone: string;
+    creatorId: string;
+    description: string;
+    maxMembers: bigint;
+    category: string;
     location: string;
-    requirements: string;
-    joinedAt: Time;
+}
+export interface ChatMessage {
+    id: bigint;
+    memberId: string;
+    senderIsProvider: boolean;
+    slotKey: string;
+    content: string;
+    serviceProviderId: string;
+    timestamp: Time;
 }
 export interface PublicRegistration {
-    product: string;
-    location: string;
     requirements: string;
+    location: string;
+    product: string;
+}
+export interface UserProfile {
+    name: string;
 }
 export enum UserRole {
     admin = "admin",
@@ -79,11 +79,17 @@ export enum UserRole {
 }
 export interface backendInterface {
     assignCallerUserRole(user: Principal, role: UserRole): Promise<void>;
+    createCustomSlot(title: string, category: string, description: string, location: string, maxMembers: bigint, creatorName: string, creatorPhone: string, creatorRequirements: string): Promise<bigint>;
+    deleteRegistration(registrationId: bigint): Promise<string>;
     getAllRegistrations(): Promise<Array<Registration>>;
     getCallerUserProfile(): Promise<UserProfile | null>;
     getCallerUserRole(): Promise<UserRole>;
     getCategories(): Promise<Array<string>>;
     getChatMessages(category: string, product: string, serviceProviderId: string): Promise<Array<ChatMessage>>;
+    getCustomSlotMemberCount(slotId: bigint): Promise<bigint>;
+    getCustomSlotMembers(slotId: bigint): Promise<Array<CustomSlotMember>>;
+    getCustomSlots(): Promise<Array<CustomSlot>>;
+    getCustomSlotsForCategory(category: string): Promise<Array<CustomSlot>>;
     getMyRegistrations(): Promise<Array<Registration>>;
     getMyServiceProviderProfile(): Promise<ServiceProviderProfile | null>;
     getProductCount(category: string, product: string): Promise<bigint>;
@@ -95,19 +101,13 @@ export interface backendInterface {
     getUserProfile(user: Principal): Promise<UserProfile | null>;
     hasSpPaidForSlot(category: string, product: string): Promise<boolean>;
     isCallerAdmin(): Promise<boolean>;
+    isCustomSlotMember(slotId: bigint): Promise<boolean>;
+    joinCustomSlot(slotId: bigint, name: string, phone: string, location: string, requirements: string): Promise<string>;
     recordSpSlotPayment(category: string, product: string): Promise<void>;
     registerForProduct(category: string, product: string, name: string, phone: string, location: string, requirements: string): Promise<string>;
-    deleteRegistration(registrationId: bigint): Promise<string>;
     registerServiceProvider(profile: ServiceProviderProfile): Promise<void>;
     saveCallerUserProfile(profile: UserProfile): Promise<void>;
     sendChatMessage(category: string, product: string, serviceProviderId: string, content: string, senderIsProvider: boolean): Promise<void>;
     sendChatMessageAsProvider(category: string, product: string, memberId: string, content: string): Promise<void>;
     submitQuote(category: string, product: string, title: string, description: string, price: string): Promise<void>;
-    createCustomSlot(title: string, category: string, description: string, location: string, maxMembers: bigint, creatorName: string, creatorPhone: string, creatorRequirements: string): Promise<bigint>;
-    getCustomSlots(): Promise<Array<CustomSlot>>;
-    getCustomSlotsForCategory(category: string): Promise<Array<CustomSlot>>;
-    joinCustomSlot(slotId: bigint, name: string, phone: string, location: string, requirements: string): Promise<string>;
-    getCustomSlotMembers(slotId: bigint): Promise<Array<CustomSlotMember>>;
-    isCustomSlotMember(slotId: bigint): Promise<boolean>;
-    getCustomSlotMemberCount(slotId: bigint): Promise<bigint>;
 }

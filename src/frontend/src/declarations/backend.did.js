@@ -35,11 +35,35 @@ export const ChatMessage = IDL.Record({
   'serviceProviderId' : IDL.Text,
   'timestamp' : Time,
 });
+export const CustomSlotMember = IDL.Record({
+  'userId' : IDL.Text,
+  'name' : IDL.Text,
+  'joinedAt' : Time,
+  'slotId' : IDL.Nat,
+  'phone' : IDL.Text,
+  'requirements' : IDL.Text,
+  'location' : IDL.Text,
+});
+export const CustomSlot = IDL.Record({
+  'id' : IDL.Nat,
+  'title' : IDL.Text,
+  'createdAt' : Time,
+  'creatorId' : IDL.Text,
+  'description' : IDL.Text,
+  'maxMembers' : IDL.Nat,
+  'category' : IDL.Text,
+  'location' : IDL.Text,
+});
 export const ServiceProviderProfile = IDL.Record({
   'name' : IDL.Text,
   'businessName' : IDL.Text,
   'category' : IDL.Text,
   'phone' : IDL.Text,
+});
+export const PublicRegistration = IDL.Record({
+  'requirements' : IDL.Text,
+  'location' : IDL.Text,
+  'product' : IDL.Text,
 });
 export const Quote = IDL.Record({
   'id' : IDL.Nat,
@@ -52,34 +76,25 @@ export const Quote = IDL.Record({
   'providerName' : IDL.Text,
   'price' : IDL.Text,
 });
-export const CustomSlot = IDL.Record({
-  'id' : IDL.Nat,
-  'title' : IDL.Text,
-  'category' : IDL.Text,
-  'description' : IDL.Text,
-  'location' : IDL.Text,
-  'creatorId' : IDL.Text,
-  'maxMembers' : IDL.Nat,
-  'createdAt' : Time,
-});
-export const CustomSlotMember = IDL.Record({
-  'slotId' : IDL.Nat,
-  'userId' : IDL.Text,
-  'name' : IDL.Text,
-  'phone' : IDL.Text,
-  'location' : IDL.Text,
-  'requirements' : IDL.Text,
-  'joinedAt' : Time,
-});
-export const PublicRegistration = IDL.Record({
-  'product' : IDL.Text,
-  'location' : IDL.Text,
-  'requirements' : IDL.Text,
-});
 
 export const idlService = IDL.Service({
-  '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+  '_initializeAccessControl' : IDL.Func([], [], []),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+  'createCustomSlot' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Nat,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+      ],
+      [IDL.Nat],
+      [],
+    ),
+  'deleteRegistration' : IDL.Func([IDL.Nat], [IDL.Text], []),
   'getAllRegistrations' : IDL.Func([], [IDL.Vec(Registration)], ['query']),
   'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -87,6 +102,18 @@ export const idlService = IDL.Service({
   'getChatMessages' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text],
       [IDL.Vec(ChatMessage)],
+      ['query'],
+    ),
+  'getCustomSlotMemberCount' : IDL.Func([IDL.Nat], [IDL.Nat], ['query']),
+  'getCustomSlotMembers' : IDL.Func(
+      [IDL.Nat],
+      [IDL.Vec(CustomSlotMember)],
+      ['query'],
+    ),
+  'getCustomSlots' : IDL.Func([], [IDL.Vec(CustomSlot)], ['query']),
+  'getCustomSlotsForCategory' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(CustomSlot)],
       ['query'],
     ),
   'getMyRegistrations' : IDL.Func([], [IDL.Vec(Registration)], ['query']),
@@ -106,6 +133,11 @@ export const idlService = IDL.Service({
       [IDL.Vec(ChatMessage)],
       ['query'],
     ),
+  'getPublicRegistrationsForCategory' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(PublicRegistration)],
+      ['query'],
+    ),
   'getQuotesForSlot' : IDL.Func(
       [IDL.Text, IDL.Text],
       [IDL.Vec(Quote)],
@@ -123,13 +155,18 @@ export const idlService = IDL.Service({
     ),
   'hasSpPaidForSlot' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isCustomSlotMember' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
+  'joinCustomSlot' : IDL.Func(
+      [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Text],
+      [],
+    ),
   'recordSpSlotPayment' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'registerForProduct' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
       [IDL.Text],
       [],
     ),
-  'deleteRegistration' : IDL.Func([IDL.Nat], [IDL.Text], []),
   'registerServiceProvider' : IDL.Func([ServiceProviderProfile], [], []),
   'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
   'sendChatMessage' : IDL.Func(
@@ -146,34 +183,6 @@ export const idlService = IDL.Service({
       [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
       [],
       [],
-    ),
-  'createCustomSlot' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
-      [IDL.Nat],
-      [],
-    ),
-  'getCustomSlots' : IDL.Func([], [IDL.Vec(CustomSlot)], ['query']),
-  'getCustomSlotsForCategory' : IDL.Func(
-      [IDL.Text],
-      [IDL.Vec(CustomSlot)],
-      ['query'],
-    ),
-  'joinCustomSlot' : IDL.Func(
-      [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
-      [IDL.Text],
-      [],
-    ),
-  'getCustomSlotMembers' : IDL.Func(
-      [IDL.Nat],
-      [IDL.Vec(CustomSlotMember)],
-      ['query'],
-    ),
-  'isCustomSlotMember' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
-  'getCustomSlotMemberCount' : IDL.Func([IDL.Nat], [IDL.Nat], ['query']),
-  'getPublicRegistrationsForCategory' : IDL.Func(
-      [IDL.Text],
-      [IDL.Vec(PublicRegistration)],
-      ['query'],
     ),
 });
 
@@ -207,11 +216,35 @@ export const idlFactory = ({ IDL }) => {
     'serviceProviderId' : IDL.Text,
     'timestamp' : Time,
   });
+  const CustomSlotMember = IDL.Record({
+    'userId' : IDL.Text,
+    'name' : IDL.Text,
+    'joinedAt' : Time,
+    'slotId' : IDL.Nat,
+    'phone' : IDL.Text,
+    'requirements' : IDL.Text,
+    'location' : IDL.Text,
+  });
+  const CustomSlot = IDL.Record({
+    'id' : IDL.Nat,
+    'title' : IDL.Text,
+    'createdAt' : Time,
+    'creatorId' : IDL.Text,
+    'description' : IDL.Text,
+    'maxMembers' : IDL.Nat,
+    'category' : IDL.Text,
+    'location' : IDL.Text,
+  });
   const ServiceProviderProfile = IDL.Record({
     'name' : IDL.Text,
     'businessName' : IDL.Text,
     'category' : IDL.Text,
     'phone' : IDL.Text,
+  });
+  const PublicRegistration = IDL.Record({
+    'requirements' : IDL.Text,
+    'location' : IDL.Text,
+    'product' : IDL.Text,
   });
   const Quote = IDL.Record({
     'id' : IDL.Nat,
@@ -224,34 +257,25 @@ export const idlFactory = ({ IDL }) => {
     'providerName' : IDL.Text,
     'price' : IDL.Text,
   });
-  const CustomSlot = IDL.Record({
-    'id' : IDL.Nat,
-    'title' : IDL.Text,
-    'category' : IDL.Text,
-    'description' : IDL.Text,
-    'location' : IDL.Text,
-    'creatorId' : IDL.Text,
-    'maxMembers' : IDL.Nat,
-    'createdAt' : IDL.Nat,
-  });
-  const CustomSlotMember = IDL.Record({
-    'slotId' : IDL.Nat,
-    'userId' : IDL.Text,
-    'name' : IDL.Text,
-    'phone' : IDL.Text,
-    'location' : IDL.Text,
-    'requirements' : IDL.Text,
-    'joinedAt' : IDL.Nat,
-  });
-  const PublicRegistration = IDL.Record({
-    'product' : IDL.Text,
-    'location' : IDL.Text,
-    'requirements' : IDL.Text,
-  });
   
   return IDL.Service({
-    '_initializeAccessControlWithSecret' : IDL.Func([IDL.Text], [], []),
+    '_initializeAccessControl' : IDL.Func([], [], []),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole], [], []),
+    'createCustomSlot' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Nat,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+        ],
+        [IDL.Nat],
+        [],
+      ),
+    'deleteRegistration' : IDL.Func([IDL.Nat], [IDL.Text], []),
     'getAllRegistrations' : IDL.Func([], [IDL.Vec(Registration)], ['query']),
     'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole], ['query']),
@@ -259,6 +283,18 @@ export const idlFactory = ({ IDL }) => {
     'getChatMessages' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text],
         [IDL.Vec(ChatMessage)],
+        ['query'],
+      ),
+    'getCustomSlotMemberCount' : IDL.Func([IDL.Nat], [IDL.Nat], ['query']),
+    'getCustomSlotMembers' : IDL.Func(
+        [IDL.Nat],
+        [IDL.Vec(CustomSlotMember)],
+        ['query'],
+      ),
+    'getCustomSlots' : IDL.Func([], [IDL.Vec(CustomSlot)], ['query']),
+    'getCustomSlotsForCategory' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(CustomSlot)],
         ['query'],
       ),
     'getMyRegistrations' : IDL.Func([], [IDL.Vec(Registration)], ['query']),
@@ -278,6 +314,11 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(ChatMessage)],
         ['query'],
       ),
+    'getPublicRegistrationsForCategory' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(PublicRegistration)],
+        ['query'],
+      ),
     'getQuotesForSlot' : IDL.Func(
         [IDL.Text, IDL.Text],
         [IDL.Vec(Quote)],
@@ -295,13 +336,18 @@ export const idlFactory = ({ IDL }) => {
       ),
     'hasSpPaidForSlot' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isCustomSlotMember' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
+    'joinCustomSlot' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Text],
+        [],
+      ),
     'recordSpSlotPayment' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'registerForProduct' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [IDL.Text],
         [],
       ),
-    'deleteRegistration' : IDL.Func([IDL.Nat], [IDL.Text], []),
     'registerServiceProvider' : IDL.Func([ServiceProviderProfile], [], []),
     'saveCallerUserProfile' : IDL.Func([UserProfile], [], []),
     'sendChatMessage' : IDL.Func(
@@ -318,34 +364,6 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
         [],
         [],
-      ),
-    'createCustomSlot' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Text, IDL.Nat, IDL.Text, IDL.Text, IDL.Text],
-        [IDL.Nat],
-        [],
-      ),
-    'getCustomSlots' : IDL.Func([], [IDL.Vec(CustomSlot)], ['query']),
-    'getCustomSlotsForCategory' : IDL.Func(
-        [IDL.Text],
-        [IDL.Vec(CustomSlot)],
-        ['query'],
-      ),
-    'joinCustomSlot' : IDL.Func(
-        [IDL.Nat, IDL.Text, IDL.Text, IDL.Text, IDL.Text],
-        [IDL.Text],
-        [],
-      ),
-    'getCustomSlotMembers' : IDL.Func(
-        [IDL.Nat],
-        [IDL.Vec(CustomSlotMember)],
-        ['query'],
-      ),
-    'isCustomSlotMember' : IDL.Func([IDL.Nat], [IDL.Bool], ['query']),
-    'getCustomSlotMemberCount' : IDL.Func([IDL.Nat], [IDL.Nat], ['query']),
-    'getPublicRegistrationsForCategory' : IDL.Func(
-        [IDL.Text],
-        [IDL.Vec(PublicRegistration)],
-        ['query'],
       ),
   });
 };

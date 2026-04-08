@@ -19,6 +19,30 @@ export interface ChatMessage {
   'serviceProviderId' : string,
   'timestamp' : Time,
 }
+export interface CustomSlot {
+  'id' : bigint,
+  'title' : string,
+  'createdAt' : Time,
+  'creatorId' : string,
+  'description' : string,
+  'maxMembers' : bigint,
+  'category' : string,
+  'location' : string,
+}
+export interface CustomSlotMember {
+  'userId' : string,
+  'name' : string,
+  'joinedAt' : Time,
+  'slotId' : bigint,
+  'phone' : string,
+  'requirements' : string,
+  'location' : string,
+}
+export interface PublicRegistration {
+  'requirements' : string,
+  'location' : string,
+  'product' : string,
+}
 export interface Quote {
   'id' : bigint,
   'title' : string,
@@ -49,18 +73,26 @@ export interface ServiceProviderProfile {
 }
 export type Time = bigint;
 export interface UserProfile { 'name' : string }
-export interface PublicRegistration { 'product' : string, 'location' : string, 'requirements' : string }
 export type UserRole = { 'admin' : null } |
   { 'user' : null } |
   { 'guest' : null };
 export interface _SERVICE {
-  '_initializeAccessControlWithSecret' : ActorMethod<[string], undefined>,
+  '_initializeAccessControl' : ActorMethod<[], undefined>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole], undefined>,
+  'createCustomSlot' : ActorMethod<
+    [string, string, string, string, bigint, string, string, string],
+    bigint
+  >,
+  'deleteRegistration' : ActorMethod<[bigint], string>,
   'getAllRegistrations' : ActorMethod<[], Array<Registration>>,
   'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole>,
   'getCategories' : ActorMethod<[], Array<string>>,
   'getChatMessages' : ActorMethod<[string, string, string], Array<ChatMessage>>,
+  'getCustomSlotMemberCount' : ActorMethod<[bigint], bigint>,
+  'getCustomSlotMembers' : ActorMethod<[bigint], Array<CustomSlotMember>>,
+  'getCustomSlots' : ActorMethod<[], Array<CustomSlot>>,
+  'getCustomSlotsForCategory' : ActorMethod<[string], Array<CustomSlot>>,
   'getMyRegistrations' : ActorMethod<[], Array<Registration>>,
   'getMyServiceProviderProfile' : ActorMethod<
     [],
@@ -72,17 +104,25 @@ export interface _SERVICE {
     [string, string, string],
     Array<ChatMessage>
   >,
+  'getPublicRegistrationsForCategory' : ActorMethod<
+    [string],
+    Array<PublicRegistration>
+  >,
   'getQuotesForSlot' : ActorMethod<[string, string], Array<Quote>>,
   'getSlotMembers' : ActorMethod<[string, string], Array<Registration>>,
   'getUserProfile' : ActorMethod<[Principal], [] | [UserProfile]>,
   'hasSpPaidForSlot' : ActorMethod<[string, string], boolean>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isCustomSlotMember' : ActorMethod<[bigint], boolean>,
+  'joinCustomSlot' : ActorMethod<
+    [bigint, string, string, string, string],
+    string
+  >,
   'recordSpSlotPayment' : ActorMethod<[string, string], undefined>,
   'registerForProduct' : ActorMethod<
     [string, string, string, string, string, string],
     string
   >,
-  'deleteRegistration' : ActorMethod<[bigint], string>,
   'registerServiceProvider' : ActorMethod<[ServiceProviderProfile], undefined>,
   'saveCallerUserProfile' : ActorMethod<[UserProfile], undefined>,
   'sendChatMessage' : ActorMethod<
@@ -97,7 +137,6 @@ export interface _SERVICE {
     [string, string, string, string, string],
     undefined
   >,
-  'getPublicRegistrationsForCategory' : ActorMethod<[string], Array<PublicRegistration>>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

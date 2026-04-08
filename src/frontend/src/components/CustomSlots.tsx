@@ -5,13 +5,59 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
 import {
+  Archive,
+  Armchair,
   ArrowLeft,
+  Bike,
+  BookOpen,
+  Briefcase,
+  Building,
+  Building2,
+  Bus,
+  Camera,
+  Car,
+  Droplet,
+  Droplets,
+  Dumbbell,
+  Factory,
+  Flame,
+  Flower2,
+  GraduationCap,
+  Hammer,
+  HardHat,
+  Headphones,
+  Home,
+  Laptop,
+  Layers,
   Loader2,
   Lock,
   MapPin,
+  Microwave,
+  Monitor,
+  Paintbrush,
+  PawPrint,
+  Phone,
+  Plane,
   Plus,
+  Printer,
+  Scissors,
+  Shield,
+  Smartphone,
+  Sofa,
+  Star,
+  Stethoscope,
   Tag,
+  Tractor,
+  TrendingUp,
+  Trophy,
+  Truck,
+  Tv,
   Users,
+  UtensilsCrossed,
+  Volume2,
+  Watch,
+  Wind,
+  Wrench,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -26,6 +72,147 @@ import {
   useJoinCustomSlot,
 } from "../hooks/useQueries";
 import type { CustomSlot, CustomSlotMember } from "../hooks/useQueries";
+
+// ===== PRODUCT ICON MAP (mirrors App.tsx PRODUCT_ICONS) =====
+const PRODUCT_ICONS: Record<string, React.ElementType> = {
+  Mobile: Smartphone,
+  Laptop: Laptop,
+  TV: Tv,
+  Speakers: Volume2,
+  Camera: Camera,
+  Headphones: Headphones,
+  Smartwatch: Watch,
+  "Gaming Console": Monitor,
+  Refrigerator: Monitor,
+  "Washing Machine": Monitor,
+  AC: Wind,
+  Microwave: Microwave,
+  Geyser: Flame,
+  Dishwasher: Droplets,
+  "Water Purifier": Droplet,
+  Chimney: Flame,
+  "Air Purifier": Wind,
+  Oven: Flame,
+  Car: Car,
+  Bike: Bike,
+  Truck: Truck,
+  Bus: Bus,
+  "Heavy Equipment": Tractor,
+  "Three Wheeler": Tractor,
+  Home: Home,
+  "Restaurant/Cafe": UtensilsCrossed,
+  Office: Briefcase,
+  Showroom: Building,
+  "Salon/Spa/Beauty Parlour": Scissors,
+  "Gym/Fitness Studio": Dumbbell,
+  Sofa: Sofa,
+  Bed: Monitor,
+  Wardrobe: Archive,
+  "Dining Table": UtensilsCrossed,
+  "Office Chair": Armchair,
+  Bookshelf: BookOpen,
+  "TV Unit": Tv,
+  "Shoe Rack": Archive,
+  "Home Furniture": Sofa,
+  "Office Furniture": Armchair,
+  "Restaurant Furniture": UtensilsCrossed,
+  Apartment: Building,
+  Villa: Home,
+  Plot: Layers,
+  "Commercial Space": Building2,
+  Studio: Home,
+  Penthouse: Building2,
+  Farmhouse: Home,
+  Warehouse: Factory,
+  Treadmill: Dumbbell,
+  Dumbbells: Dumbbell,
+  "Bench Press": Dumbbell,
+  Elliptical: Dumbbell,
+  "Rowing Machine": Dumbbell,
+  "Pull-up Bar": Dumbbell,
+  "Resistance Bands": Dumbbell,
+  "Yoga Mat": Dumbbell,
+  "Exercise Bike": Bike,
+  Kettlebells: Dumbbell,
+  Programming: Laptop,
+  Design: Paintbrush,
+  "Digital Marketing": TrendingUp,
+  Finance: Briefcase,
+  Language: BookOpen,
+  Photography: Camera,
+  Music: Volume2,
+  Cooking: UtensilsCrossed,
+  Fitness: Dumbbell,
+  Business: Briefcase,
+  "Hair Care": Scissors,
+  "Skin Care": Flower2,
+  Makeup: Flower2,
+  "Nail Care": Scissors,
+  Spa: Flower2,
+  Waxing: Scissors,
+  "Bridal Package": Flower2,
+  Massage: Flower2,
+  Facial: Flower2,
+  "Eyebrow Threading": Scissors,
+  "Beauty Products": Flower2,
+  Cement: HardHat,
+  Steel: HardHat,
+  Bricks: HardHat,
+  Sand: HardHat,
+  Tiles: Layers,
+  Paint: Paintbrush,
+  Glass: Layers,
+  Plywood: HardHat,
+  Pipes: Droplets,
+  "Electrical Fittings": Hammer,
+  Ceiling: Layers,
+  "General Physician": Stethoscope,
+  Dentist: Stethoscope,
+  Physiotherapy: Stethoscope,
+  "Eye Care": Stethoscope,
+  Diagnostics: Stethoscope,
+  "Nursing Care": Stethoscope,
+  "Mental Health": Stethoscope,
+  Nutrition: Stethoscope,
+  Paediatrics: Stethoscope,
+  Accounting: Briefcase,
+  HR: Briefcase,
+  "App/Web Development": Monitor,
+  Printing: Printer,
+  Security: Shield,
+  Cleaning: Droplets,
+  Consulting: Briefcase,
+  Cake: Star,
+  "Home Made Foods": UtensilsCrossed,
+  Dogs: PawPrint,
+  Birds: PawPrint,
+  "Fish & Aquarium": Droplet,
+  "Fashion Influencers": Star,
+  "Beauty Influencers": Flower2,
+  "Food Influencers": UtensilsCrossed,
+  "Fitness Influencers": Dumbbell,
+  "Travel Influencers": Plane,
+  "Tech Influencers": Laptop,
+  "Lifestyle Influencers": Star,
+  "Parenting Influencers": Star,
+  "Finance Influencers": Briefcase,
+  "Education Influencers": GraduationCap,
+};
+
+// Resolve product icon from title using same logic as App.tsx ProductCard
+function getProductIcon(title: string): React.ElementType {
+  // Direct match
+  if (PRODUCT_ICONS[title]) return PRODUCT_ICONS[title];
+  // Prefix match (e.g. "Car - Tata" → "Car")
+  const prefix = title.includes(" - ") ? title.split(" - ")[0] : title;
+  if (PRODUCT_ICONS[prefix]) return PRODUCT_ICONS[prefix];
+  // Partial match: find any key that the title starts with
+  for (const key of Object.keys(PRODUCT_ICONS)) {
+    if (title.toLowerCase().startsWith(key.toLowerCase()))
+      return PRODUCT_ICONS[key];
+  }
+  return Monitor;
+}
 
 const SLOT_CATEGORIES = [
   "Electronics & Appliances",
@@ -108,12 +295,31 @@ function formatRelativeDate(ts: bigint): string {
   return `${Math.floor(diff / 86_400_000)}d ago`;
 }
 
+// Generate 6-month tab array (same approach as HOME_MONTH_TABS in App.tsx)
+export function generateCustomSlotMonthTabs(count = 6) {
+  const now = new Date();
+  const tabs: { label: string; year: number; month: number }[] = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    tabs.push({
+      label: d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
+      year: d.getFullYear(),
+      month: d.getMonth(),
+    });
+  }
+  return tabs;
+}
+
+// Shared month tabs — generated once at module load time
+const CUSTOM_SLOT_MONTH_TABS = generateCustomSlotMonthTabs(6);
+
 // ===== CUSTOM SLOT CARD =====
 interface CustomSlotCardProps {
   slot: CustomSlot;
   index: number;
   memberCount: number;
-  monthFilteredCount?: number;
+  monthFilteredCount: number;
+  optimisticCount?: number;
   isMember: boolean;
   onJoin: () => void;
   onViewMembers: () => void;
@@ -124,11 +330,14 @@ function CustomSlotCard({
   index,
   memberCount,
   monthFilteredCount,
+  optimisticCount,
   isMember,
   onJoin,
   onViewMembers,
 }: CustomSlotCardProps) {
-  const displayCount = monthFilteredCount ?? memberCount;
+  // Priority: optimistic > monthFiltered > total
+  const displayCount =
+    optimisticCount !== undefined ? optimisticCount : monthFilteredCount;
   const color = getCategoryColor(slot.category);
   const isFull = memberCount >= Number(slot.maxMembers);
   const pct = Math.min(
@@ -144,6 +353,8 @@ function CustomSlotCard({
         ? "oklch(0.75 0.18 70)"
         : "oklch(0.65 0.2 145)";
 
+  const ProductIcon = getProductIcon(slot.title);
+
   return (
     <motion.div
       data-ocid={`community_slots.card.${index}`}
@@ -154,13 +365,22 @@ function CustomSlotCard({
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-2">
-        <div className="flex-1 min-w-0">
-          <h3 className="font-display font-bold text-foreground text-base leading-tight line-clamp-2">
-            {slot.title}
-          </h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            {formatRelativeDate(slot.createdAt)}
-          </p>
+        <div className="flex items-start gap-3 flex-1 min-w-0">
+          {/* Product Icon */}
+          <div
+            className="w-10 h-10 rounded-xl flex-shrink-0 flex items-center justify-center"
+            style={{ background: `${color}20` }}
+          >
+            <ProductIcon size={18} style={{ color }} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-display font-bold text-foreground text-base leading-tight line-clamp-2">
+              {slot.title}
+            </h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {formatRelativeDate(slot.createdAt)}
+            </p>
+          </div>
         </div>
         <div className="flex flex-col gap-1 items-end flex-shrink-0">
           <span
@@ -171,7 +391,7 @@ function CustomSlotCard({
             {slot.category}
           </span>
           <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary tracking-wider">
-            Community Slot
+            Custom Slot
           </span>
         </div>
       </div>
@@ -179,7 +399,7 @@ function CustomSlotCard({
       {/* Description */}
       {slot.description && (
         <p className="text-sm text-muted-foreground line-clamp-2 leading-relaxed">
-          {slot.description}
+          {slot.description.replace(/\[Month:[^\]]+\]/g, "").trim()}
         </p>
       )}
 
@@ -263,15 +483,7 @@ function CustomSlotCard({
           className="flex justify-between text-xs mb-1"
           style={{ color: "oklch(0.65 0.05 258)" }}
         >
-          <span>
-            {displayCount} members
-            {monthFilteredCount !== undefined &&
-            monthFilteredCount !== memberCount ? (
-              <span className="text-muted-foreground ml-1">
-                ({memberCount} total)
-              </span>
-            ) : null}
-          </span>
+          <span>{displayCount} members</span>
           <span>{Number(slot.maxMembers)} max</span>
         </div>
         <div
@@ -283,7 +495,7 @@ function CustomSlotCard({
             style={{ background: barColor }}
             initial={{ width: 0 }}
             animate={{ width: `${pct}%` }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            transition={{ duration: 0.4, ease: "easeOut" }}
           />
         </div>
       </div>
@@ -334,12 +546,14 @@ interface CreateSlotModalProps {
   onClose: () => void;
   categoryId?: string;
   activeMonth?: { year: number; month: number; label: string };
+  onCreated?: (newCount: number, newSlotTitle?: string) => void;
 }
 
 function CreateSlotModal({
   onClose,
   categoryId,
   activeMonth,
+  onCreated,
 }: CreateSlotModalProps) {
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState(categoryId ?? "Other");
@@ -351,7 +565,6 @@ function CreateSlotModal({
   const [creatorRequirements, setCreatorRequirements] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createSlot = useCreateCustomSlot();
-  const _joinSlot = useJoinCustomSlot();
   const queryClient = useQueryClient();
 
   const isLockedCategory = categoryId !== undefined && categoryId !== "Other";
@@ -379,19 +592,22 @@ function CreateSlotModal({
         : now.getMonth() + 1;
       const monthTag = `[Month: ${purchaseYear}-${String(purchaseMonth).padStart(2, "0")}]`;
       const fullCreatorReq = `${creatorRequirements.trim()} ${monthTag}`.trim();
+      // Embed month tag in description so slot-level filtering works without fetching all members
+      const descWithMonth = `${description.trim()} ${monthTag}`.trim();
       await createSlot.mutateAsync({
         title: title.trim(),
         category,
-        description: description.trim(),
+        description: descWithMonth,
         location: location.trim(),
         maxMembers,
         creatorName: creatorName.trim(),
         creatorPhone: creatorPhone.trim(),
         creatorRequirements: fullCreatorReq,
       });
-      // Wait a tick for onSuccess to fire its refetch, then do a final refetch
-      // to ensure the slot list is up-to-date before closing the modal
-      await new Promise((r) => setTimeout(r, 300));
+      // Notify parent for optimistic update before closing
+      onCreated?.(1, title.trim());
+      // Give backend a moment, then force refetch
+      await new Promise((r) => setTimeout(r, 400));
       await queryClient.refetchQueries({
         queryKey: ["customSlots"],
         exact: false,
@@ -401,7 +617,7 @@ function CreateSlotModal({
         exact: false,
       });
       toast.success(
-        "Community slot created! You've been added as the first member.",
+        "Custom slot created! You've been added as the first member.",
       );
       onClose();
     } catch (err: unknown) {
@@ -451,16 +667,17 @@ function CreateSlotModal({
             </div>
             <div>
               <h2 className="font-display text-xl font-bold text-foreground">
-                Create Community Slot
+                Create Custom Slot
               </h2>
               <p className="text-xs text-muted-foreground">
-                Others can join and connect with you
+                {activeMonth
+                  ? `For ${activeMonth.label} — others can join and connect`
+                  : "Others can join and connect with you"}
               </p>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* What are you looking for — slot title */}
             <div className="space-y-1.5">
               <Label htmlFor="cs-title" className="text-sm font-medium">
                 What are you looking for?{" "}
@@ -476,7 +693,6 @@ function CreateSlotModal({
               />
             </div>
 
-            {/* Category — locked or free-text */}
             {isLockedCategory ? (
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Category</Label>
@@ -539,12 +755,10 @@ function CreateSlotModal({
               />
             </div>
 
-            {/* Creator details — auto-join as first member */}
             <div className="border-t border-border pt-4">
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">
                 Your Details (you'll be added as first member)
               </p>
-
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <Label
@@ -562,7 +776,6 @@ function CreateSlotModal({
                     className="bg-muted border-border focus:border-primary"
                   />
                 </div>
-
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="cs-creator-phone"
@@ -581,7 +794,6 @@ function CreateSlotModal({
                     className="bg-muted border-border focus:border-primary"
                   />
                 </div>
-
                 <div className="space-y-1.5">
                   <Label
                     htmlFor="cs-creator-req"
@@ -623,7 +835,6 @@ function CreateSlotModal({
               <p className="text-xs text-muted-foreground">Max 50 members</p>
             </div>
 
-            {/* Fee info banner */}
             <div
               className="flex items-center gap-2 text-xs rounded-lg px-3 py-2"
               style={{
@@ -662,9 +873,15 @@ interface JoinSlotModalProps {
   slot: CustomSlot;
   onClose: () => void;
   activeMonth?: { year: number; month: number; label: string };
+  onJoined?: () => void;
 }
 
-function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
+function JoinSlotModal({
+  slot,
+  onClose,
+  activeMonth,
+  onJoined,
+}: JoinSlotModalProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [location, setLocation] = useState("");
@@ -693,10 +910,12 @@ function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
         location: location.trim(),
         requirements: fullRequirements,
       });
+      onJoined?.();
       toast.success(`Joined "${slot.title}"!`);
       onClose();
-    } catch (err: any) {
-      toast.error(err?.message ?? "Failed to join slot. Please try again.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(msg ?? "Failed to join slot. Please try again.");
     }
   };
 
@@ -745,6 +964,7 @@ function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
             </h2>
             <p className="text-sm text-muted-foreground">
               Fill in your details to join this slot
+              {activeMonth ? ` for ${activeMonth.label}` : ""}
             </p>
           </div>
 
@@ -762,7 +982,6 @@ function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
                 className="bg-muted border-border focus:border-primary"
               />
             </div>
-
             <div className="space-y-1.5">
               <Label htmlFor="js-phone" className="text-sm font-medium">
                 Phone Number
@@ -777,7 +996,6 @@ function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
                 className="bg-muted border-border focus:border-primary"
               />
             </div>
-
             <div className="space-y-1.5">
               <Label htmlFor="js-location" className="text-sm font-medium">
                 Your Location
@@ -797,7 +1015,6 @@ function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
                 />
               </div>
             </div>
-
             <div className="space-y-1.5">
               <Label htmlFor="js-req" className="text-sm font-medium">
                 Your Requirements
@@ -812,8 +1029,6 @@ function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
                 className="bg-muted border-border focus:border-primary resize-none"
               />
             </div>
-
-            {/* Fee info banner */}
             <div
               className="flex items-center gap-2 text-xs rounded-lg px-3 py-2"
               style={{
@@ -824,7 +1039,6 @@ function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
               <span>🎉</span>
               <span>Free for Testing — slot joining fee will apply later</span>
             </div>
-
             <Button
               type="submit"
               data-ocid="join_slot.submit_button"
@@ -842,23 +1056,6 @@ function JoinSlotModal({ slot, onClose, activeMonth }: JoinSlotModalProps) {
     </div>
   );
 }
-
-// Generate 6 month tabs
-function generateCustomSlotMonthTabs() {
-  const now = new Date();
-  const tabs: { label: string; year: number; month: number }[] = [];
-  for (let i = 0; i < 6; i++) {
-    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
-    tabs.push({
-      label: d.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
-      year: d.getFullYear(),
-      month: d.getMonth(),
-    });
-  }
-  return tabs;
-}
-
-const CUSTOM_SLOT_MONTH_TABS = generateCustomSlotMonthTabs();
 
 // ===== CUSTOM SLOT MEMBERS PAGE =====
 interface CustomSlotMembersPageProps {
@@ -880,12 +1077,10 @@ function CustomSlotMembersPage({
   const color = getCategoryColor(slot.category);
   const [activeMonthIdx, setActiveMonthIdx] = useState(defaultMonthIdx);
 
-  // Sync with parent activeMonth when it changes
   useEffect(() => {
     setActiveMonthIdx(defaultMonthIdx);
   }, [defaultMonthIdx]);
 
-  // Filter members by selected month tab
   const filteredMembers = useMemo(() => {
     const tab = CUSTOM_SLOT_MONTH_TABS[activeMonthIdx];
     if (!tab) return members;
@@ -898,7 +1093,6 @@ function CustomSlotMembersPage({
           Number.parseInt(monthMatch[2]) - 1 === tab.month
         );
       }
-      // fallback: use joinedAt timestamp
       const d = new Date(Number(m.joinedAt) / 1_000_000);
       return d.getFullYear() === tab.year && d.getMonth() === tab.month;
     });
@@ -913,7 +1107,6 @@ function CustomSlotMembersPage({
       exit={{ opacity: 0, y: -12 }}
       transition={{ duration: 0.2 }}
     >
-      {/* Back button */}
       <button
         type="button"
         data-ocid="slot_members.back_button"
@@ -921,10 +1114,9 @@ function CustomSlotMembersPage({
         className="flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-foreground transition-colors mb-6"
       >
         <ArrowLeft size={16} />
-        Back to Community Slots
+        Back to Custom Slots
       </button>
 
-      {/* Slot header */}
       <div className="rounded-2xl border border-border bg-card p-5 mb-6">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
@@ -939,12 +1131,12 @@ function CustomSlotMembersPage({
             </h1>
             {slot.description && (
               <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
-                {slot.description}
+                {slot.description.replace(/\[Month:[^\]]+\]/g, "").trim()}
               </p>
             )}
           </div>
           <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-primary/10 text-primary tracking-wider flex-shrink-0">
-            Community Slot
+            Custom Slot
           </span>
         </div>
         <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
@@ -984,7 +1176,6 @@ function CustomSlotMembersPage({
         ))}
       </div>
 
-      {/* Members list */}
       <h2 className="font-display text-lg font-bold text-foreground mb-4">
         Members in {CUSTOM_SLOT_MONTH_TABS[activeMonthIdx]?.label}{" "}
         {isAuthenticated ? `(${filteredMembers.length})` : ""}
@@ -1049,7 +1240,11 @@ function CustomSlotMembersPage({
               </div>
               {member.requirements && (
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  {member.requirements}
+                  {member.requirements
+                    .replace(/\[Month:[^\]]+\]/g, "")
+                    .replace(/\[Timeline:[^\]]+\]/g, "")
+                    .replace(/\[Expected by:[^\]]+\]/g, "")
+                    .trim()}
                 </p>
               )}
             </motion.div>
@@ -1060,7 +1255,7 @@ function CustomSlotMembersPage({
   );
 }
 
-// ===== SLOT CARD WRAPPER (handles member check) =====
+// ===== SLOT CARD WRAPPER (handles member check + optimistic updates) =====
 interface SlotCardWrapperProps {
   slot: CustomSlot;
   index: number;
@@ -1069,6 +1264,8 @@ interface SlotCardWrapperProps {
   onJoin: (slot: CustomSlot) => void;
   onViewMembers: (slot: CustomSlot) => void;
   onAuthRequired: () => void;
+  highlighted?: boolean;
+  cardRef?: (el: HTMLDivElement | null) => void;
 }
 
 function SlotCardWrapper({
@@ -1079,6 +1276,8 @@ function SlotCardWrapper({
   onJoin,
   onViewMembers,
   onAuthRequired,
+  highlighted = false,
+  cardRef,
 }: SlotCardWrapperProps) {
   const { data: isMember = false } = useIsCustomSlotMember(
     isAuthenticated ? slot.id : null,
@@ -1087,10 +1286,24 @@ function SlotCardWrapper({
   const { data: members } = useCustomSlotMembers(
     isAuthenticated ? slot.id : null,
   );
+  const [optimisticCount, setOptimisticCount] = useState<number | undefined>(
+    undefined,
+  );
+
+  // Clear optimistic override once backend data arrives and is up-to-date
+  useEffect(() => {
+    if (optimisticCount !== undefined && members !== undefined) {
+      // If backend count is >= optimistic, clear the override
+      if (members.length >= optimisticCount) {
+        setOptimisticCount(undefined);
+      }
+    }
+  }, [members, optimisticCount]);
 
   // Compute month-filtered count for the active month tab
   const monthFilteredCount = useMemo(() => {
-    if (!activeMonth || !members) return members?.length ?? 0;
+    if (!members) return 0;
+    if (!activeMonth) return members.length;
     return members.filter((m) => {
       const req = m.requirements || "";
       const monthMatch = req.match(/\[Month:\s*(\d{4})-(\d{2})\]/);
@@ -1100,7 +1313,6 @@ function SlotCardWrapper({
           Number.parseInt(monthMatch[2]) - 1 === activeMonth.month
         );
       }
-      // fallback: use joinedAt timestamp
       const d = new Date(Number(m.joinedAt) / 1_000_000);
       return (
         d.getFullYear() === activeMonth.year &&
@@ -1110,21 +1322,31 @@ function SlotCardWrapper({
   }, [members, activeMonth]);
 
   return (
-    <CustomSlotCard
-      slot={slot}
-      index={index}
-      memberCount={memberCount}
-      monthFilteredCount={activeMonth ? monthFilteredCount : undefined}
-      isMember={isMember}
-      onJoin={() => {
-        if (!isAuthenticated) {
-          onAuthRequired();
-          return;
-        }
-        onJoin(slot);
-      }}
-      onViewMembers={() => onViewMembers(slot)}
-    />
+    <div
+      ref={cardRef}
+      className={
+        highlighted
+          ? "ring-2 ring-primary rounded-2xl transition-all duration-1000"
+          : undefined
+      }
+    >
+      <CustomSlotCard
+        slot={slot}
+        index={index}
+        memberCount={memberCount}
+        monthFilteredCount={monthFilteredCount}
+        optimisticCount={optimisticCount}
+        isMember={isMember}
+        onJoin={() => {
+          if (!isAuthenticated) {
+            onAuthRequired();
+            return;
+          }
+          onJoin(slot);
+        }}
+        onViewMembers={() => onViewMembers(slot)}
+      />
+    </div>
   );
 }
 
@@ -1144,14 +1366,44 @@ export function CustomSlotsSection({
   externalCreateOpen = false,
   onExternalCreateClose,
   categoryId,
-  activeMonth,
+  activeMonth: externalActiveMonth,
 }: CustomSlotsSectionProps) {
   const { data: slots = [], isLoading } = useCustomSlots();
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [joiningSlot, setJoiningSlot] = useState<CustomSlot | null>(null);
   const [viewingSlot, setViewingSlot] = useState<CustomSlot | null>(null);
+  const [highlightedSlotId, setHighlightedSlotId] = useState<bigint | null>(
+    null,
+  );
+  const slotCardRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const prevExternalRef = useRef(false);
+
+  // Internal month tab state — synced to external if provided
+  const [internalMonthIdx, setInternalMonthIdx] = useState(() => {
+    if (!externalActiveMonth) return 0;
+    const idx = CUSTOM_SLOT_MONTH_TABS.findIndex(
+      (t) =>
+        t.year === externalActiveMonth.year &&
+        t.month === externalActiveMonth.month,
+    );
+    return idx >= 0 ? idx : 0;
+  });
+
+  // Sync internal month idx when external activeMonth changes
+  useEffect(() => {
+    if (externalActiveMonth) {
+      const idx = CUSTOM_SLOT_MONTH_TABS.findIndex(
+        (t) =>
+          t.year === externalActiveMonth.year &&
+          t.month === externalActiveMonth.month,
+      );
+      if (idx >= 0) setInternalMonthIdx(idx);
+    }
+  }, [externalActiveMonth]);
+
+  const activeMonthIdx = internalMonthIdx;
+  const activeMonth = CUSTOM_SLOT_MONTH_TABS[activeMonthIdx];
 
   useEffect(() => {
     if (externalCreateOpen && !prevExternalRef.current) {
@@ -1160,20 +1412,38 @@ export function CustomSlotsSection({
     prevExternalRef.current = externalCreateOpen;
   }, [externalCreateOpen]);
 
-  const filteredSlots = categoryId
-    ? slots.filter((s) => s.category === categoryId)
-    : categoryFilter === "All"
-      ? slots
-      : slots.filter((s) => s.category === categoryFilter);
+  // Filter by category, then by month tag in creatorRequirements, then sort newest first
+  const filteredSlots = useMemo(() => {
+    // Step 1: category filter
+    let result = categoryId
+      ? slots.filter((s) => s.category === categoryId)
+      : categoryFilter === "All"
+        ? slots
+        : slots.filter((s) => s.category === categoryFilter);
 
-  // Compute the index of activeMonth in the month tabs
-  const activeMonthIdx = useMemo(() => {
-    if (!activeMonth) return 0;
-    const idx = CUSTOM_SLOT_MONTH_TABS.findIndex(
-      (t) => t.year === activeMonth.year && t.month === activeMonth.month,
+    // Step 2: month filter — only show slots whose description has the matching [Month: YYYY-MM] tag
+    if (activeMonth) {
+      const currentTabMonthStr = `${CUSTOM_SLOT_MONTH_TABS[0].year}-${String(CUSTOM_SLOT_MONTH_TABS[0].month + 1).padStart(2, "0")}`;
+      const activeMonthStr = `${activeMonth.year}-${String(activeMonth.month + 1).padStart(2, "0")}`;
+      result = result.filter((s) => {
+        const desc = s.description || "";
+        const monthMatch = desc.match(/\[Month:\s*(\d{4})-(\d{2})\]/);
+        if (monthMatch) {
+          return (
+            Number.parseInt(monthMatch[1]) === activeMonth.year &&
+            Number.parseInt(monthMatch[2]) - 1 === activeMonth.month
+          );
+        }
+        // Fallback: no month tag → show under current month (first tab) only
+        return activeMonthStr === currentTabMonthStr;
+      });
+    }
+
+    // Step 3: sort newest first (descending by createdAt timestamp)
+    return [...result].sort(
+      (a, b) => Number(b.createdAt) - Number(a.createdAt),
     );
-    return idx >= 0 ? idx : 0;
-  }, [activeMonth]);
+  }, [slots, categoryId, categoryFilter, activeMonth]);
 
   if (viewingSlot) {
     return (
@@ -1189,13 +1459,13 @@ export function CustomSlotsSection({
   }
 
   return (
-    <section data-ocid="community_slots.section" className="mt-4">
+    <section data-ocid="custom_slots.section" className="mt-4">
       {/* Section header */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="font-display text-2xl font-extrabold text-foreground flex items-center gap-2">
             <Users size={22} className="text-primary" />
-            Community Slots
+            Custom Slots
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             User-created slots — join to connect with others
@@ -1203,7 +1473,7 @@ export function CustomSlotsSection({
         </div>
         {isAuthenticated && (
           <Button
-            data-ocid="community_slots.create_slot_button"
+            data-ocid="custom_slots.create_slot_button"
             onClick={() => setShowCreateModal(true)}
             className="flex items-center gap-1.5 bg-primary text-white font-semibold rounded-xl px-4 h-9 text-sm hover:opacity-90"
           >
@@ -1214,14 +1484,37 @@ export function CustomSlotsSection({
         )}
       </div>
 
-      {/* Category filter chips — only shown on the global community page, not per-category */}
+      {/* Month Timeline Tabs — always shown above custom slots */}
+      <div
+        data-ocid="custom_slots.timeline_tabs"
+        className="flex gap-2 overflow-x-auto pb-2 mb-4"
+        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+      >
+        {CUSTOM_SLOT_MONTH_TABS.map((tab, idx) => (
+          <button
+            key={tab.label}
+            type="button"
+            data-ocid={`custom_slots.timeline.tab.${idx + 1}`}
+            onClick={() => setInternalMonthIdx(idx)}
+            className={`flex-shrink-0 px-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+              idx === activeMonthIdx
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Category filter chips — only shown on the global custom slots page */}
       {!categoryId && (
         <div className="flex gap-2 pb-4 overflow-x-auto scrollbar-none">
           {["All", ...SLOT_CATEGORIES].map((cat) => (
             <button
               key={cat}
               type="button"
-              data-ocid={"community_slots.filter.tab"}
+              data-ocid={"custom_slots.filter.tab"}
               onClick={() => setCategoryFilter(cat)}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all ${
                 categoryFilter === cat
@@ -1238,7 +1531,7 @@ export function CustomSlotsSection({
       {/* Slot grid */}
       {isLoading ? (
         <div
-          data-ocid="community_slots.loading_state"
+          data-ocid="custom_slots.loading_state"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
         >
           {[0, 1, 2, 3, 4, 5].map((i) => (
@@ -1247,7 +1540,7 @@ export function CustomSlotsSection({
         </div>
       ) : filteredSlots.length === 0 ? (
         <motion.div
-          data-ocid="community_slots.empty_state"
+          data-ocid="custom_slots.empty_state"
           className="flex flex-col items-center justify-center py-16 text-center rounded-2xl border border-dashed border-border"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -1256,14 +1549,14 @@ export function CustomSlotsSection({
             <Users size={24} className="text-primary" />
           </div>
           <p className="font-display text-lg font-bold text-foreground mb-1">
-            No community slots yet
+            No custom slots yet
           </p>
           <p className="text-sm text-muted-foreground mb-4">
             Be the first to create one!
           </p>
           {isAuthenticated && (
             <Button
-              data-ocid="community_slots.create_first_button"
+              data-ocid="custom_slots.create_first_button"
               onClick={() => setShowCreateModal(true)}
               className="flex items-center gap-1.5 bg-primary text-white font-semibold rounded-xl px-5 h-9 text-sm"
             >
@@ -1284,6 +1577,10 @@ export function CustomSlotsSection({
               onJoin={setJoiningSlot}
               onViewMembers={setViewingSlot}
               onAuthRequired={onAuthRequired}
+              highlighted={slot.id === highlightedSlotId}
+              cardRef={(el) => {
+                slotCardRefs.current[String(slot.id)] = el;
+              }}
             />
           ))}
         </div>
@@ -1299,6 +1596,20 @@ export function CustomSlotsSection({
             }}
             categoryId={categoryId}
             activeMonth={activeMonth}
+            onCreated={(_count, newTitle) => {
+              // After creation, wait for the slot list to refetch then scroll + highlight
+              if (!newTitle) return;
+              setTimeout(() => {
+                // Find the newly created slot by title (newest first after sort)
+                const newSlot = slots.find((s) => s.title === newTitle);
+                if (newSlot) {
+                  setHighlightedSlotId(newSlot.id);
+                  const el = slotCardRefs.current[String(newSlot.id)];
+                  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  setTimeout(() => setHighlightedSlotId(null), 2500);
+                }
+              }, 800);
+            }}
           />
         )}
         {joiningSlot && (

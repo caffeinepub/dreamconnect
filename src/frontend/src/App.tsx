@@ -2290,7 +2290,10 @@ function HomePage({
 function MyRegistrationsPage() {
   const { data: registrations = [], isLoading } = useMyRegistrations();
   const deleteRegistration = useDeleteRegistration();
+  const register = useRegisterForProduct();
   const [confirmDeleteId, setConfirmDeleteId] = useState<bigint | null>(null);
+  const [movingRegId, setMovingRegId] = useState<bigint | null>(null);
+  const [moveTargetMonthIdx, setMoveTargetMonthIdx] = useState(0);
 
   const formatDate = (ts: bigint) => {
     const d = new Date(Number(ts) / 1_000_000);
@@ -2314,13 +2317,33 @@ function MyRegistrationsPage() {
     return regDate < currentMonthStart;
   };
 
-  const getNextMonthLabel = () => {
-    const now = new Date();
-    const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    return next.toLocaleDateString("en-IN", {
-      month: "short",
-      year: "numeric",
-    });
+  // Future month options (current month onward) for the move dropdown
+  const futureMonths = HOME_MONTH_TABS;
+
+  const handleMoveToMonth = async (reg: Registration) => {
+    const targetTab = futureMonths[moveTargetMonthIdx];
+    if (!targetTab) return;
+    setMovingRegId(reg.id);
+    try {
+      // Replace [Month: ...] tag in requirements with new month tag
+      const newMonthTag = `[Month: ${targetTab.year}-${String(targetTab.month + 1).padStart(2, "0")}]`;
+      const updatedRequirements = `${reg.requirements.replace(/\[Month:[^\]]+\]/g, "").trim()} ${newMonthTag}`;
+      // Delete old + re-register with new month
+      await deleteRegistration.mutateAsync(reg.id);
+      await register.mutateAsync({
+        category: reg.category,
+        product: reg.product,
+        name: reg.name,
+        phone: reg.phone,
+        location: reg.location,
+        requirements: updatedRequirements,
+      });
+      toast.success(`Moved to ${targetTab.label}!`);
+      setMovingRegId(null);
+    } catch {
+      toast.error("Failed to move registration. Please try again.");
+      setMovingRegId(null);
+    }
   };
 
   const expiredRegs = registrations.filter(isExpired);
@@ -2418,71 +2441,93 @@ function MyRegistrationsPage() {
                       <p className="text-xs font-semibold text-amber-800 dark:text-amber-300 mb-2">
                         Your slot has expired. Update your timeline?
                       </p>
-                      <div className="flex gap-2 flex-wrap">
-                        <Button
-                          data-ocid={`my_registrations.move_button.${idx + 1}`}
-                          size="sm"
-                          variant="outline"
-                          className="text-xs h-7 border-amber-400 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-600"
-                          onClick={() => {
-                            toast.info(
-                              `Please re-register for ${getNextMonthLabel()} to update your timeline for ${reg.product}.`,
-                            );
-                          }}
-                        >
-                          Move to {getNextMonthLabel()}
-                        </Button>
-                        {confirmDeleteId === reg.id ? (
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs text-destructive font-semibold">
-                              Are you sure?
-                            </span>
+                      <div className="flex flex-col gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <select
+                            data-ocid={`my_registrations.move_month_select.${idx + 1}`}
+                            value={moveTargetMonthIdx}
+                            onChange={(e) =>
+                              setMoveTargetMonthIdx(Number(e.target.value))
+                            }
+                            className="h-7 px-2 rounded-lg bg-amber-100 dark:bg-amber-900/40 border border-amber-300 dark:border-amber-600 text-xs text-amber-800 dark:text-amber-300 focus:outline-none"
+                          >
+                            {futureMonths.map((m, mi) => (
+                              <option key={m.label} value={mi}>
+                                {m.label}
+                              </option>
+                            ))}
+                          </select>
+                          <Button
+                            data-ocid={`my_registrations.move_button.${idx + 1}`}
+                            size="sm"
+                            variant="outline"
+                            disabled={
+                              movingRegId === reg.id || !register.isActorReady
+                            }
+                            className="text-xs h-7 border-amber-400 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:border-amber-600"
+                            onClick={() => handleMoveToMonth(reg)}
+                          >
+                            {movingRegId === reg.id ? (
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                            ) : null}
+                            Move to {futureMonths[moveTargetMonthIdx]?.label}
+                          </Button>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {confirmDeleteId === reg.id ? (
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs text-destructive font-semibold">
+                                Are you sure?
+                              </span>
+                              <Button
+                                data-ocid={`my_registrations.confirm_button.${idx + 1}`}
+                                size="sm"
+                                variant="destructive"
+                                className="text-xs h-7"
+                                disabled={deleteRegistration.isPending}
+                                onClick={async () => {
+                                  try {
+                                    await deleteRegistration.mutateAsync(
+                                      reg.id,
+                                    );
+                                    toast.success("Registration removed");
+                                    setConfirmDeleteId(null);
+                                  } catch {
+                                    toast.error(
+                                      "Failed to remove registration. Please try again.",
+                                    );
+                                  }
+                                }}
+                              >
+                                {deleteRegistration.isPending ? (
+                                  <Loader2 className="h-3 w-3 animate-spin" />
+                                ) : (
+                                  "Yes, remove"
+                                )}
+                              </Button>
+                              <Button
+                                data-ocid={`my_registrations.cancel_button.${idx + 1}`}
+                                size="sm"
+                                variant="ghost"
+                                className="text-xs h-7"
+                                disabled={deleteRegistration.isPending}
+                                onClick={() => setConfirmDeleteId(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          ) : (
                             <Button
-                              data-ocid={`my_registrations.confirm_button.${idx + 1}`}
-                              size="sm"
-                              variant="destructive"
-                              className="text-xs h-7"
-                              disabled={deleteRegistration.isPending}
-                              onClick={async () => {
-                                try {
-                                  await deleteRegistration.mutateAsync(reg.id);
-                                  toast.success("Registration removed");
-                                  setConfirmDeleteId(null);
-                                } catch {
-                                  toast.error(
-                                    "Failed to remove registration. Please try again.",
-                                  );
-                                }
-                              }}
-                            >
-                              {deleteRegistration.isPending ? (
-                                <Loader2 className="h-3 w-3 animate-spin" />
-                              ) : (
-                                "Yes, remove"
-                              )}
-                            </Button>
-                            <Button
-                              data-ocid={`my_registrations.cancel_button.${idx + 1}`}
+                              data-ocid={`my_registrations.remove_button.${idx + 1}`}
                               size="sm"
                               variant="ghost"
-                              className="text-xs h-7"
-                              disabled={deleteRegistration.isPending}
-                              onClick={() => setConfirmDeleteId(null)}
+                              className="text-xs h-7 text-muted-foreground hover:text-destructive"
+                              onClick={() => setConfirmDeleteId(reg.id)}
                             >
-                              Cancel
+                              Remove
                             </Button>
-                          </div>
-                        ) : (
-                          <Button
-                            data-ocid={`my_registrations.remove_button.${idx + 1}`}
-                            size="sm"
-                            variant="ghost"
-                            className="text-xs h-7 text-muted-foreground hover:text-destructive"
-                            onClick={() => setConfirmDeleteId(reg.id)}
-                          >
-                            Remove
-                          </Button>
-                        )}
+                          )}
+                        </div>
                       </div>
                     </div>
                   </motion.div>
